@@ -1,71 +1,98 @@
 <!-- BEGIN @przeprogramowani/10x-cli -->
 
-## Zestaw narzędzi AI 10xDevs — Moduł 1, Lekcja 3
+## Zestaw narzędzi AI 10xDevs — Moduł 1, Lekcja 4
 
-Przygotuj szkielet projektu dla stosu wybranego w Lekcji 2, używając **łańcucha bootstrap**:
+Wdróż agenta do projektu, który utworzyłeś w Lekcji 3, za pomocą **łańcucha kontekstu agenta**:
 
 ```
-(/10x-init  →  /10x-shape  →  /10x-prd)  →  /10x-tech-stack-selector  →  /10x-bootstrapper
+(/10x-init  →  /10x-shape  →  /10x-prd  →  /10x-tech-stack-selector  →  /10x-bootstrapper)  →  /10x-agents-md  →  /10x-rule-review  →  /10x-lesson
 ```
 
-Łańcuch PRD pochodzi z Lekcji 1, a selektor stosu technologicznego z Lekcji 2 — oba zostały ponownie uwzględnione w tej lekcji, aby można było poprawić PRD lub zmienić stos w trakcie pracy. `/10x-bootstrapper` jest głównym tematem lekcji. Łańcuch kończy się tutaj w v1; przyszła Lekcja 4 skonfiguruje kontekst agenta (`CLAUDE.md`, `AGENTS.md`).
+Łańcuch PRD → tech-stack → bootstrap pochodzi z Lekcji 1–3 (został ponownie uwzględniony, aby można było naprawić projekt w trakcie pracy). `/10x-agents-md`, `/10x-rule-review` i `/10x-lesson` to główne tematy lekcji. Łańcuch zostaje rozszerzony w Lekcji 5 o krok infra/deploy.
 
 ### Router zadań — od czego zacząć
 
-| Skill | Użyj go, gdy |
+| Umiejętność | Użyj jej, gdy |
 | --- | --- |
-| **Bootstrap (główny temat lekcji)** | |
-| `/10x-bootstrapper` | Masz przekazanie w `context/foundation/tech-stack.md` (utworzone przez `/10x-tech-stack-selector`) i jesteś gotowy przygotować szkielet projektu w bieżącym katalogu. Skill odczytuje przekazanie, wyszukuje wybraną kartę w rejestrze starterów, uruchamia jej CLI za pomocą jednej z trzech strategii cwd (utworzenie szkieletu w katalogu tymczasowym, a następnie przeniesienie plików wyżej; utworzenie szkieletu bezpośrednio w bieżącym katalogu; klonowanie repozytorium startera bez zachowywania jego historii git), zawsze zachowuje `context/`, odkłada inne kolizje jako rodzeństwo `.scaffold`, wykonuje lekką kontrolę aktualności przed utworzeniem szkieletu i pogłębiony audyt po jego utworzeniu oraz zapisuje dziennik weryfikacji w `context/changes/bootstrap-verification/verification.md`. Użyj PO `/10x-tech-stack-selector`. |
+| **Kontekst agenta (temat lekcji)** | |
+| `/10x-agents-md` | Repozytorium jest utworzone, ale agent nie ma wdrożenia specyficznego dla projektu. Analizuje repozytorium (manifest pakietu, README, skrypty, konfigurację lint/test, układ, historię commitów) i zapisuje zwięzłe, uporządkowane „Wytyczne repozytorium” w `AGENTS.md` (lub, gdy jest wywoływane z podkatalogu, `AGENTS.md` na poziomie katalogu, przeformułowane wokół lokalnych konwencji i dominującej jednostki). Użyj jako alternatywy dla wbudowanego `/init` hosta lub jako rozwiązania awaryjnego dla narzędzi, które go nie mają. Treść na poziomie repozytorium ma docelowo ~200 wierszy; przewodniki na poziomie katalogu mają docelowo 120–250 słów. |
+| `/10x-rule-review <path>` | Masz plik zasad dla AI (`AGENTS.md`, `CLAUDE.md`, `.cursor/rules/*.mdc`, `.github/copilot-instructions.md`, `.windsurfrules`, zagnieżdżone pliki dla poszczególnych obszarów) i chcesz otrzymać kartę wyników w 5 osiach: długość, osadzone fragmenty kodu/konfiguracji, precyzja języka, redundancja względem wiedzy publicznej oraz kolejność zasad. Niezależne od narzędzia — ocenia stan artefaktu, a nie projektu. Domyślne wyjście jest tylko do odczytu; tylko Kontrola 5 (zmiana kolejności) może edytować, i wyłącznie po wyraźnej akceptacji. |
+| `/10x-lesson [seed]` | Zauważyłeś powtarzającą się zasadę, którą warto ujawnić na potrzeby przyszłych uruchomień `/10x-frame`, `/10x-research`, `/10x-plan`, `/10x-plan-review`, `/10x-implement` i `/10x-impl-review`. Dodaje pojedynczy wpis (Kontekst / Problem / Zasada / Dotyczy) do `context/foundation/lessons.md`. Przy pierwszym użyciu samodzielnie inicjalizuje plik z kanonicznym nagłówkiem `# Lessons Learned`. Tylko dopisywanie — nigdy nie zmienia kolejności ani nie przepisuje wcześniejszych wpisów. |
 | **W razie potrzeby uruchom ponownie wcześniejszy etap** | |
-| `/10x-init` / `/10x-shape` / `/10x-prd` / `/10x-tech-stack-selector` | Dołączone, aby można było poprawić PRD lub zmienić stos w trakcie pracy. Jeśli `/10x-bootstrapper` zgłosi odmowę z powodu rozbieżności rejestru albo zmienisz zdanie co do startera, uruchom ponownie `/10x-tech-stack-selector`, aby ponownie wygenerować `tech-stack.md`, a następnie wywołaj ponownie. |
+| `/10x-init` / `/10x-shape` / `/10x-prd` / `/10x-tech-stack-selector` / `/10x-bootstrapper` / `/10x-stack-assess` / `/10x-health-check` | Dołączone, aby można było poprawić PRD, zmienić stos technologiczny lub ponownie utworzyć szkielet w trakcie pracy. Jeśli `/10x-rule-review` zgłosi `FAIL`, którego nie da się rozwiązać przez skrócenie, często wskazuje to na niejednoznaczne decyzje dotyczące PRD lub stosu — uruchom ponownie wcześniejszą umiejętność zamiast wypełniać `AGENTS.md` poprawkami. |
 
-### Jak łańcuch przekazuje pracę
+### Jak łańcuch przekazuje pracę dalej
 
-- `/10x-tech-stack-selector` (Lekcja 2) zapisuje `context/foundation/tech-stack.md` z frontmatterem zawierającym 4 klucze (`starter_id`, `package_manager`, `project_name`, `hints`) oraz jedn akapit treści `## Why this stack`.
-- `/10x-bootstrapper` odczytuje ten plik W CAŁOŚCI (bez fallbacku do historii rozmowy). Jeśli go nie ma, skill odmawia, podając jednolinijkowe przekierowanie do `/10x-tech-stack-selector`, i zatrzymuje się — bez wbudowanego mini-przekazania, bez trybu samodzielnego w v1.
-- Wybrane `starter_id` jest wyszukiwane w `/skills/10x-tech-stack-selector/references/starter-registry.yaml`. Skill korzysta z tego rejestru; nie jest jego właścicielem. Walidator CI (`scripts/validate-starter-registry-sync.mjs`) zapobiega odwoływaniu się przez bootstrapper do `starter_id`, którego nie ma w rejestrze.
-- Skill zapisuje `context/changes/bootstrap-verification/verification.md` jako dziennik ścieżki audytowej uruchomienia. Schemat znajduje się w `/skills/10x-bootstrapper/references/verification-log-schema.md`.
+- `/10x-agents-md` zapisuje (lub punktowo aktualizuje) `AGENTS.md` w określonym zakresie. Zakres na poziomie repozytorium = plik znajduje się w korzeniu repozytorium i opisuje cały projekt; zakres na poziomie katalogu = plik znajduje się obok kodu, którym zarządza, i jest przeformułowany wokół lokalnej jednostki, całkowicie pomijając perspektywę całego repozytorium. Umiejętność nigdy nie nadpisuje po cichu — gdy cel istnieje, przełącza się na przepływ aktualizacji.
+- `/10x-rule-review` odczytuje dowolny wskazany plik markdown z zasadami dla AI i wyświetla kartę wyników z 5 kontrolami (`OK` / `WARN` / `FAIL`) wraz z konkretnymi poprawkami. Nie zależy od wcześniejszego uruchomienia `/10x-agents-md`; w ten sam sposób możesz sprawdzić `.cursor/rules/`, instrukcje Copilot lub ręcznie napisany `CLAUDE.md`.
+- `/10x-lesson` przy pierwszym użyciu samodzielnie inicjalizuje `context/foundation/lessons.md`, a następnie przy każdym wywołaniu dopisuje jeden wpis Kontekst/Problem/Zasada/Dotyczy. Plik jest wykorzystywany jako wcześniejszy kontekst przez umiejętności fazy planowania i przeglądu wprowadzone później w procesie — `/10x-frame`, `/10x-research`, `/10x-plan`, `/10x-plan-review`, `/10x-implement`, `/10x-impl-review`.
 
-### Co bootstrapper obejmuje (a czego NIE obejmuje)
+### Co wychwytują umiejętności lekcji (a czego NIE robią)
 
-- **Obejmuje (v1)**: tworzenie szkieletu przez `cmd_template` wybranej karty (delegowanie do CLI, nie generowanie plików inline), trzy strategie cwd wybierane z `bootstrapper-config.yaml` (`subdir-then-move`, `native-cwd`, `git-clone`), rygorystyczną politykę konfliktów tworzącą rodzeństwo `.scaffold` + zawsze zachowującą `context/`, dwa etapy weryfikacji (lekka kontrola aktualności przed utworzeniem szkieletu + pogłębiony audyt zależny od języka po jego utworzeniu), podsumowanie audytu według poziomów istotności, pełny dziennik weryfikacji na dysku.
-- **NIE obejmuje w v1 (celowo)**: generowania `AGENTS.md` / `CLAUDE.md` (odroczone do przyszłej Lekcji 4 — „Architektura pamięci”); nakładek rozmieszczenia elementów certyfikacyjnych dla poszczególnych starterów (należą do przyszłego skilla kontekstu agenta, nie tutaj); plików workflow CI; fallbacku AI-as-bridge dla stosów spoza rejestru (odroczone do v2 — w v1 tech-stack-selector w trybie łańcuchowym już ogranicza wybór do rejestru, więc taki przypadek nie może wystąpić); trybu samodzielnego, w którym użytkownik podaje stos inline bez przekazania (odroczone do v2); działań kompensacyjnych dla `bootstrapper_confidence: best-effort` lub `quality_override: true` (widoczne w rozmowie, ale bez automatycznego działania następczego — to również zadanie przyszłego skilla architektury pamięci).
+- **`/10x-agents-md` wychwytuje**: strukturę projektu, polecenia build/test/lint faktycznie obecne w skryptach, konwencje commitów wywnioskowane z historii, pułapki specyficzne dla repozytorium, które agent mógłby przeoczyć, odwołania do kanonicznych plików przez ścieżki `@` zamiast wklejania ich treści. Zakres na poziomie katalogu dodatkowo wychwytuje: lokalne wzorce nazewnictwa/układu wywnioskowane z sąsiednich elementów, dozwolone/zabronione importy, wzorzec testów używany przez sąsiednie moduły oraz pułapki widoczne w bezpośrednim otoczeniu.
+- **`/10x-agents-md` NIE** wkleja zawartości `tsconfig.json` / `eslint.config` / dokumentacji frameworka, którą agent już zna; **NIE** generuje ogólnych intencji typu „pisz czysty kod”; **NIE** zastępuje wbudowanego `/init` hosta, gdy taki istnieje — jest pozycjonowany jako alternatywa lub rozwiązanie awaryjne, a nie domyślna opcja.
+- **`/10x-rule-review` wychwytuje**: werdykt długości (OK ≤ 200 niepustych wierszy, WARN 201–500, FAIL 501+), bloki kodu/konfiguracji, które powinny być odwołaniami `@`, niejasny język intencji, redundancję względem dokumentacji frameworka, którą agent zna już z treningu, oraz propozycję zmiany kolejności w Kontroli 5, która przenosi krytyczne zasady na górę.
+- **`/10x-rule-review` NIE** edytuje pliku domyślnie; **NIE** ocenia zawartości projektu (architektury, wyborów stosu) — ocenia stan artefaktu zasad; **NIE** generuje „poprawionej wersji” pliku (Kontrola 5 może przenosić sekcje po wyraźnej akceptacji, ale nigdy nie przepisuje brzmienia zasad).
+- **`/10x-lesson` wychwytuje**: jeden wpis na wywołanie z krótkim tytułem H2 w trybie rozkazującym (tytuł JEST zasadą), Kontekst (podsystem / faza / wzorzec plików, wystarczająco konkretny do dopasowywania wzorców), Problem (co konkretnie psuje się bez zasady, najlepiej wraz z wcześniejszym incydentem), Zasada (1–2 zdania w trybie rozkazującym, które można dosłownie wkleić do przyszłego ustalenia przeglądu), Dotyczy (podzbiór `frame`, `research`, `plan`, `plan-review`, `implement`, `impl-review` lub `all`).
+- **`/10x-lesson` NIE** edytuje ani nie usuwa istniejących lekcji — plik z założenia pozwala wyłącznie na dopisywanie (bezrefleksyjne przepisywanie powtarzających się zasad jest trybem awarii, któremu ta konwencja zapobiega); **NIE** grupuje wielu zasad w jednym wywołaniu; **NIE** wypełnia pól proaktywnie (użytkownik pisze treść — to cena wychwytywania zasad poza ustrukturyzowanym przeglądem).
 
-### Polityka konfliktów
+### Test włączenia (filtr dla AGENTS.md / CLAUDE.md)
 
-Gdy skill przenosi pliki z tymczasowego katalogu szkieletu do bieżącego katalogu roboczego, stosuje rygorystyczną macierz:
+Przed dodaniem zasady do dowolnego pliku zasad dla AI zapytaj: *czy agent mógłby wiedzieć to bez tego pliku? Czy publiczne dane treningowe — książki, blogi, repozytoria w tym stosie — mogły go do tego przygotować?* Jeśli tak, pomiń ją. Jeśli nie, zachowaj ją. Plik służy do wdrożenia agenta, który już zna TypeScript / Python / twój framework, ale NIE zna twoich lokalnych konwencji.
 
-- **`context/**`** — wszystko, co szkielet próbował zapisać w `context/`, jest **odrzucane**. Twoje `context/` jest źródłem prawdy dla łańcucha bootstrap (PRD, przekazanie tech-stack, plany, ramy) i nigdy nie jest nadpisywane.
-- **`.gitignore`** — scalanie przez dopisanie: istniejące linie pozostają w kolejności, a następnie linie ze szkieletu są odduplikowywane względem Twojego zestawu i dopisywane z komentarzem-separatorem. Semantyka ignorowania Git jest addytywna, więc łączenie jest bezpieczne.
-- **`package.json`, `README.md`, `CLAUDE.md`, `AGENTS.md`, root-level `*.md`** — wygrywa istniejący plik; kopia ze szkieletu trafia jako rodzeństwo `<filename>.scaffold`. Możesz użyć `diff README.md README.md.scaffold`, aby zobaczyć, co dostarczył starter, a co już było.
-- **Wszystko inne** — jest przenoszone bez komunikatu, jeśli nie ma konfliktu, albo odkładane jako `<filename>.scaffold`, jeśli konflikt występuje. Macierz nigdy nie usuwa plików użytkownika.
+Należy:
+- nieoczywiste konwencje projektu (kształt odpowiedzi błędów, nazewnictwo plików, dozwolone ścieżki importu)
+- pułapki specyficzne dla projektu i „żenujące” obejścia związane z historią lub błędami zależności
+- odwołania do kanonicznych plików przez ścieżki `@` (np. `@src/features/users/user.service.ts` jako odwołanie do wzorca, a nie wklejony kod)
 
-Dla strategii `git-clone` (10x-astro-starter i podobne): sklonowane `.git/` jest usuwane przed przeniesieniem wyżej, dzięki czemu historia upstreamowego startera nie przedostaje się do Twojego repozytorium. Następnie inicjalizujesz własną historię (`git init`).
+NIE należy:
+- dokumentacja popularnych frameworków
+- zawartość README, którą agent i tak przeczyta (połącz przez `@README.md`)
+- popularne ogólne porady („używaj trybu TypeScript strict”), które są już wymuszane przez konfigurację
+- deklaracje intencji („pisz czysty kod”, „stosuj dobre praktyki”) — przekształć w sprawdzalne zachowanie lub pomiń
 
-### Dziennik weryfikacji
+### U-kształtna uwaga i szczegółowe zasady
 
-Każde uruchomienie zapisuje `context/changes/bootstrap-verification/verification.md`. Sekcje:
+LLM-y najsilniej skupiają uwagę na początku i końcu kontekstu (Lost-in-the-Middle / U-shaped attention). Długi monolityczny `CLAUDE.md` umieszcza zasady ze środka w najsłabszej strefie uwagi. Dwie praktyczne konsekwencje:
 
-- **`## Hand-off`** — dosłowna kopia frontmatteru tech-stack.md oraz treści `## Why this stack`.
-- **`## Pre-scaffold verification`** — tabela ustaleń dotyczących aktualności (wersja pakietu npm + `time.modified` dla starterów JS; GitHub `pushed_at` dla każdego startera z GitHub `docs_url`).
-- **`## Scaffold log`** — rozstrzygnięte wywołanie CLI, kod wyjścia, przeniesione pliki, konflikty przedstawione jako rodzeństwo `.scaffold`, obsługa `.gitignore`.
-- **`## Post-scaffold audit`** — pełne dane wyjściowe audytu dla każdego języka (`npm audit --json` dla JS, `pip-audit` dla Python, `cargo audit` dla Rust itd.). Podział według poziomów istotności: CRITICAL i HIGH są prezentowane inline na czacie, MODERATE i LOW tylko w dzienniku. Podział na bezpośrednie i przechodnie zależności, jeśli narzędzie go obsługuje.
-- **`## Hints recorded but not acted on`** — każda wskazówka z przekazania, którą bootstrapper odczytał, ale na której nie działał w v1. Kompletność ścieżki audytowej dla przyszłego skilla architektury pamięci.
-- **`## Next steps`** — tekst wskazujący dalsze kroki. v1 podaje „your project is scaffolded and verified — happy hacking” i oznacza przyszły skill z Lekcji 4 jako następne ogniwo łańcucha.
+1. **Najważniejsze zasady trafiają na górę** każdego pliku zasad.
+2. **Zasady dla poszczególnych obszarów powinny znajdować się obok ich kodu** — zagnieżdżone `AGENTS.md` / `CLAUDE.md` wewnątrz `src/api/`, `.cursor/rules/*.mdc` z globami plików itd. Szczegółowe pliki są ładowane selektywnie i pojawiają się w całości blisko początku własnej sekcji, zamiast być zakopane w wierszu 400 jednego dużego pliku.
 
-Folder (`context/changes/bootstrap-verification/`) celowo nie zawiera `change.md`. Uruchomienia bootstrap są jednorazowymi artefaktami, a nie śledzonymi zmianami workflow — folder zawiera dziennik i nic więcej. Ponowne uruchomienia stosują zabezpieczenie ostrzegające i wymagające potwierdzenia przed nadpisaniem; furtką awaryjną jest `verification-v2.md` (i tak dalej).
+Kontrola 5 (zmiana kolejności) w `/10x-rule-review` operacjonalizuje konsekwencję (1); test włączenia wraz z `/10x-agents-md` na poziomie katalogu operacjonalizuje konsekwencję (2).
 
-### Ścieżki foundation używane przez tę lekcję
+### Ćwiczenie kalibracyjne z pięcioma wzorcami
 
-- `context/foundation/tech-stack.md` — wejście (z Lekcji 2)
-- `context/changes/bootstrap-verification/verification.md` — wyjście (dziennik ścieżki audytowej)
-- `context/foundation/lessons.md` — powtarzające się reguły i pułapki
-- `docs/reference/contract-surfaces.md` — rejestr kluczowych nazw
+Przed zapisaniem zasady potwierdź, że agent faktycznie łamie konwencję bez niej. Wybierz jeden wzorzec z projektu (kształt odpowiedzi błędów, nazewnictwo plików, styl importów, struktura modułu, obsługa dat). Następnie:
+
+1. Poproś agenta o zaimplementowanie zgodnie ze wzorcem 3–5 razy ze stanu czystego, bez zasady.
+2. Zanotuj, gdzie złamał konwencję; uchwyć czas wykonania, przeanalizowane pliki oraz widoczny koszt/tokeny, jeśli host je pokazuje.
+3. Dodaj zasadę składającą się z 1–3 zdań do odpowiedniego zakresu (głównego lub na poziomie obszaru).
+4. Uruchom ponownie to samo zadanie w świeżej sesji i porównaj przestrzeganie konwencji, czas, pliki i liczbę iteracji.
+
+Jeśli agent już bez zasady ma tendencję do stosowania konwencji, nie potrzebujesz tej zasady. Jeśli systematycznie wybiera niewłaściwy wzorzec, znalazłeś zasadę o dużej dźwigni, którą warto dodać. To ćwiczenie pokazuje, jak w praktyce wygląda „zasłużenie na zasadę przez powtarzającą się porażkę”.
+
+### Hierarchia i interoperacyjność narzędzi
+
+- **Claude Code** ładuje `CLAUDE.md` z katalogu użytkownika (`~/.claude/CLAUDE.md`), korzenia repozytorium oraz każdego podkatalogu, w którym pracuje agent. Głębsze pliki zastępują lub uzupełniają pliki znajdujące się wyżej.
+- **Codex** i **GitHub Copilot** ładują `AGENTS.md` od bieżącego katalogu w górę — wygrywa najbliższy plik.
+- Jeden kanoniczny plik jest lepszy niż trzy duplikaty. Typowy wzorzec: `AGENTS.md` jako źródło prawdy, `CLAUDE.md` jako cienka nakładka Claude Code z importem `@AGENTS.md`, `.github/copilot-instructions.md` tylko wtedy, gdy Copilot potrzebuje własnych dodatków. Dowiązanie symboliczne (`ln -s AGENTS.md CLAUDE.md`) jest najprostszą deduplikacją, gdy narzędzia wymagają obu nazw.
+- Automatyczna pamięć (np. `~/.claude/projects/<dir-with-slashes-as-dashes>/memory/MEMORY.md` Claude Code) jest lokalna dla maszyny i nie zastępuje `AGENTS.md`. Zasady wiążące zespół znajdują się w repozytorium; automatyczna pamięć jest osobistym cache'em, który można okresowo przeglądać.
+
+### Hooki wewnętrznej pętli (deterministyczne sprzężenie zwrotne bez promptowania)
+
+Mechaniczne, nieopcjonalne kontrole powinny znajdować się w hookach (np. `PostToolUse` Claude Code), a nie w pliku zasad. Agent kończy edycję; uruchamia się formatter lub szybki lint; wynik wraca bez konieczności przypominania mu o tym. Szablon ustawień (`settings.json.template`) jest dostarczany w pakiecie lekcji jako punkt wejścia do konfiguracji. Przepływy proceduralne (głębszy przegląd, lista kontrolna wydania, wdrożenie w sandboxie) trzymaj w umiejętnościach, a hooki rezerwuj dla deterministycznych sygnałów narzędzi.
+
+### Ścieżki fundamentu używane przez tę lekcję
+
+- `AGENTS.md` / `CLAUDE.md` (oraz warianty dla poszczególnych obszarów) — wynik `/10x-agents-md`
+- `context/foundation/lessons.md` — wynik `/10x-lesson` (rejestr tylko do dopisywania, używany przez przyszłe umiejętności planowania/przeglądu)
+- `context/foundation/prd.md`, `context/foundation/tech-stack.md` — dane wejściowe z wcześniejszych lekcji, nadal obecne
+- `docs/reference/contract-surfaces.md` — rejestr nazw mających kluczowe znaczenie (utworzony przez `/10x-init`)
 
 ### Uniwersalny język
 
-Dostarczony skill nie zawiera odniesień do 10xDevs / kohort / certyfikacji. Audyt po utworzeniu szkieletu jest wybierany według `language_family` na podstawie niewielkiej tabeli wyszukiwania; kohorty, których stos trafia do `java`, `php`, `dart` lub kombinacji wielu języków, zobaczą w dzienniku linię „no built-in audit tool for this ecosystem” oraz rekomendowane narzędzie zewnętrzne, a nie fałszywy wpis „0 findings”.
+Dostarczone umiejętności nie zawierają odniesień do 10xDevs / kohorty / certyfikacji. `/10x-agents-md` odkrywa informacje na podstawie repozytorium, w którym jest wywoływane; `/10x-rule-review` jest niezależne od narzędzia i traktuje każdy plik jako „artefakt zasad dla AI”; `/10x-lesson` zapisuje wpis o jednym kształcie niezależnie od dziedziny projektu. Ćwiczenie kalibracyjne z pięcioma wzorcami ma charakter ilustracyjny — zastąp wzorce wzorcami z własnego stosu.
 
-Skille nie mogą zapisywać do `context/archive/`. Zarchiwizowane zmiany są niezmienne; jeśli rozstrzygnięta ścieżka docelowa zaczyna się od `context/archive/`, przerwij z komunikatem: „This change is archived. Open a new change with `/10x-new` instead.”
+Umiejętności nie mogą zapisywać do `context/archive/`. Zarchiwizowane zmiany są niezmienne; jeśli rozwiązana ścieżka docelowa zaczyna się od `context/archive/`, przerwij z komunikatem: „This change is archived. Open a new change with `/10x-new` instead.”
 
 <!-- END @przeprogramowani/10x-cli -->
