@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Anonymizer Prawniczy — wysyłka</title>
+<style>
+  body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; width: 320px; padding: 14px; margin: 0; color: #1a1a2e; background: #f7f8fa; }
+  h1 { font-size: 15px; margin: 0 0 10px; color: #0b0c15; }
+  .backend { font-size: 11px; color: #555; word-break: break-all; background: #ececf1; padding: 6px 8px; border-radius: 6px; margin-bottom: 10px; }
+  button { width: 100%; padding: 10px; border: none; border-radius: 8px; background: #2c3e50; color: #fff; font-weight: 600; cursor: pointer; margin-top: 6px; }
+  button:hover { background: #1a252f; }
+  input[type="file"] { display: none; }
+  .label-btn { display: inline-block; padding: 7px 12px; border: 1px solid #ccc; border-radius: 6px; background: #fff; font-size: 12px; cursor: pointer; }
+  .status { font-size: 11px; margin-top: 8px; min-height: 18px; color: #333; }
+  .note { font-size: 10px; color: #777; margin-top: 6px; }
+</style>
+</head>
+<body>
+  <h1>Anonymizer Prawniczy — wysyłka do backendu</h1>
+  <div class="backend" id="backend">Backend: https://anonimizator.fly.dev</div>
+
+  <label class="label-btn">Wybierz PDF / DOCX <input type="file" id="filePicker" accept=".pdf,.docx,.doc,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"></label>
+  <div id="fileName" style="font-size:11px;margin-top:6px;color:#333;">Brak pliku</div>
+
+  <button id="btnSend">Wyślij do anonimizacji (POST /anonymize)</button>
+  <button id="btnCheck" style="background:#556677;">Sprawdź /health</button>
+
+  <div class="status" id="status"></div>
+  <div class="note">Uprawnienia: activeTab + storage + downloads. Komunikacja z backendem przez service-worker (CORS: backend musi zezwolić).</div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

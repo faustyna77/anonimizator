@@ -1,1 +1,60 @@
-{"manifest_version":3,"name":"Anonymizer Prawniczy","version":"1.0","permissions":["activeTab","storage"],"host_permissions":["<all_urls>"]}
+{
+  "manifest_version": 3,
+  "name": "Anonymizer Prawniczy",
+  "version": "1.1",
+  "description": "Wysyła PDF/DOCX do anonimizacji przez backend https://anonimizator.fly.dev (manifest v3).",
+  "permissions": [
+    "activeTab",
+    "storage",
+    "downloads",
+    "clipboardWrite"
+  ],
+  "host_permissions": [
+    "https://anonimizator.fly.dev/*",
+    "<all_urls>"
+  ],
+  "optional_permissions": [
+    "tabs"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_icon": {
+      "16": "icon16.png",
+      "48": "icon48.png",
+      "128": "icon128.png"
+    },
+    "default_popup": "popup.html",
+    "default_title": "Anonimizator Prawniczy"
+  },
+  "icons": {
+    "16": "icon16.png",
+    "48": "icon48.png",
+    "128": "icon128.png"
+  },
+  "commands": {
+    "_execute_action": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+A",
+        "mac": "Command+Shift+A"
+      },
+      "description": "Otwórz rozszerzenie"
+    }
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["injected.js"],
+      "matches": ["<all_urls>"]
+    }
+  ],
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_idle",
+      "all_frames": false
+    }
+  ],
+  "update_url": "https://clients2.google.com/service/update2/crx"
+}

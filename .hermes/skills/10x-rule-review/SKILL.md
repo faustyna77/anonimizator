@@ -300,3 +300,17 @@ Jeśli kontrola ma wynik OK, nadal umieść ją w tabeli, ale pomiń podsekcję 
 - **Plik jest `.mdc` z frontmatterem (`globs:`, `alwaysApply:`):** licz linie zasad od końca frontmatteru. Sam frontmatter jest konfiguracją, a nie treścią zasad.
 - **Plik jest wygenerowanym stubem z `/init` i nie był modyfikowany:** nadal go przejrzyj. Często dominuje Kontrola 4 (nadmiarowość) — to sygnał do uporządkowania.
 - **W projekcie istnieje wiele plików zasad:** przejrzyj ten przekazany. Wspomnij o plikach sąsiednich w „Top 3 actions” tylko wtedy, gdy jest to istotne (np. duplikacja między głównym `AGENTS.md` a zagnieżdżonym).
+
+---
+
+## Po zmianie zasad — jak przetestować (praktyka)
+
+After any edit to a rules file (ordering, new rule, removal), test with ONE representative agent task; do not batch structural edits.
+
+Reference: `references/testing-rules.md` (concrete prompts + `grep`/command checks for AGENTS.md-style rules: instance name, module path, `.venv/` usage).
+
+Pitfall (generalizable): do not assume the edit is sufficient because the file saved — the agent reads rules at session start; include the rule reference in your prompt for strict verification, and verify with a command (`grep`, server start), not chat reading alone.
+
+Pitfall (10x-cli vs Hermes): `npx @przeprogramowani/10x-cli` pulls Claude-Code `.claude/` templates, not Hermes skills. If `.claude/` appeared, ignore/remove; copy to `.hermes/skills/` only when the file is actually needed, and avoid overwriting existing `10x-*` skills.
+
+User preference embedded: concise, direct answers; confirm decisions quickly; prefer concrete commands over narrative explanation.
