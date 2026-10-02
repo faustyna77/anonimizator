@@ -4,7 +4,18 @@ version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.11"
-dependencies = ["fastapi", "uvicorn"]
+dependencies = [
+    "alembic>=1.14,<2",
+    "fastapi",
+    "pydantic-settings>=2.7,<3",
+    "psycopg[binary]>=3.2,<4",
+    "SQLAlchemy>=2.0,<3",
+    "supabase>=2.11,<3",
+    "uvicorn",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8,<9", "httpx>=0.27,<1"]
 
 [project.scripts]
 anonymizer-prawniczy = "anonymizer_prawniczy:main"

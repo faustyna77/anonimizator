@@ -5,14 +5,12 @@ const API_BASE = import.meta.env.VITE_API_BASE || 'https://anonimizator.fly.dev'
 
 function App() {
   const [status, setStatus] = useState('Łączenie...');
-  const [docs, setDocs] = useState([]);
-  const [file, setFile] = useState(null);
 
   useEffect(() => {
-    fetch(`${API_BASE}/docs`) // zakładany endpoint; backend ma tylko / obecnie
+    fetch(`${API_BASE}/health`)
       .then((r) => (r.ok ? r.json() : Promise.reject()))
-      .then((data) => setStatus('Backend OK — ' + (data?.length ?? 0) + ' dokumentów'))
-      .catch(() => setStatus('Backend offline (anonimizator.fly.dev) — brak tras'));
+      .then(() => setStatus('Backend OK'))
+      .catch(() => setStatus('Backend offline (anonimizator.fly.dev)'));
   }, []);
 
   return (
@@ -28,13 +26,8 @@ function App() {
 
       <section style={{ padding: 20, border: '1px solid #ddd', borderRadius: 10, marginTop: 20 }}>
         <h2>Prześlij dokument do anonimizacji</h2>
-        <input type="file" accept=".pdf,.docx" onChange={(e) => setFile(e.target.files?.[0] || null)} />
+        <input type="file" accept=".pdf,.docx" />
         <button style={{ marginLeft: 8 }} onClick={() => alert('Wdróż endpoint POST /anonymize w backend/app/main.py')}>Wyślij (demo)</button>
-      </section>
-
-      <section style={{ padding: 20, border: '1px solid #ddd', borderRadius: 10, marginTop: 20 }}>
-        <h2>Dokumenty</h2>
-        {docs.length === 0 ? <p>Brak dokumentów (backend nie ma jeszcze trasy /docs).</p> : <ul>{docs.map((d, i) => <li key={i}>{d.name || d.id}</li>)}</ul>}
       </section>
 
       <footer style={{ marginTop: 40, fontSize: 12, color: '#999', borderTop: '1px solid #eee', paddingTop: 12 }}>

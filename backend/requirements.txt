@@ -2,3 +2,8 @@ fastapi
 uvicorn
 pdfplumber
 python-docx
+alembic>=1.14,<2
+pydantic-settings>=2.7,<3
+psycopg[binary]>=3.2,<4
+SQLAlchemy>=2.0,<3
+supabase>=2.11,<3

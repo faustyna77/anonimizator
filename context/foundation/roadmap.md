@@ -3,7 +3,7 @@ project: Anonymizer Prawniczy
 version: 1
 status: draft
 created: 2026-09-28
-updated: 2026-09-28
+updated: 2026-10-02
 prd_version: —
 main_goal: speed
 top_blocker: time
@@ -47,7 +47,7 @@ Prawnicy ręcznie anonimizują dokumenty przed wysłaniem ich do narzędzi AI, c
 
 | ID | Change ID | Outcome (user can …) | Prerequisites | PRD refs | Status |
 | --- | --- | --- | --- | --- | --- |
-| F-01 | minimal-document-access | (foundation) granica dostępu oddziela dokumenty i reguły kancelarii | — | MS-03, MS-05 | ready |
+| F-01 | minimal-document-access | (foundation) granica dostępu oddziela dokumenty i reguły kancelarii | — | MS-03, MS-05 | in-progress |
 | S-01 | document-anonymization-flow | wysłać PDF/DOCX i odebrać wersję ze znacznikami | F-01 | MS-01, MS-03 | proposed |
 | S-02 | chrome-ai-anonymization | uruchomić anonimizację z rozszerzenia na aplikacji AI | S-01 | MS-02 | proposed |
 | S-03 | office-rules-management | zarządzać regułami i słownikami kancelarii | F-01, S-01 | MS-04, MS-05 | proposed |
@@ -86,7 +86,7 @@ What's already in place in the codebase as of `2026-09-28` (auto-researched + us
 - **Blockers:** —
 - **Unknowns:** Czy jedno konto użytkownika może należeć do więcej niż jednej kancelarii? — Owner: user. Block: no.
 - **Risk:** Minimalny zakres musi od razu oddzielać dane kancelarii, bez rozbudowywania modelu uprawnień poza potrzeby pilotażu.
-- **Status:** ready
+- **Status:** in-progress
 
 ## Slices
 
