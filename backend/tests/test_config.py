@@ -9,7 +9,7 @@ def test_auth_configuration_rejects_missing_values_without_echoing_environment(m
     monkeypatch.setenv("SUPABASE_SERVICE_ROLE_KEY", "server-secret-that-must-not-leak")
     monkeypatch.delenv("DATABASE_URL", raising=False)
 
-    settings = Settings()
+    settings = Settings(_env_file=None)
 
     with pytest.raises(RuntimeError) as error:
         settings.require_protected_route_configuration()
@@ -26,7 +26,7 @@ def test_public_auth_configuration_excludes_server_credentials(monkeypatch):
     monkeypatch.setenv("SUPABASE_SERVICE_ROLE_KEY", "server-secret")
     monkeypatch.setenv("DATABASE_URL", "postgresql+psycopg://user:password@localhost:5432/app")
 
-    settings = Settings()
+    settings = Settings(_env_file=None)
 
     assert settings.public_auth_configuration == {
         "url": "https://example.supabase.co",

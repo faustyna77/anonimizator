@@ -252,10 +252,10 @@ Migracja wprowadza nowe tabele w PostgreSQL na Fly, bez istniejących danych apl
 
 #### Automated
 
-- [x] 1.1 Narzędzie migracyjne backendu uruchamia migracje przeciwko lokalnej lub testowej PostgreSQL, obejmującą kancelarię, profil oraz unikalne powiązanie użytkownika z kancelarią
-- [x] 1.2 Konfiguracja backendu odrzuca brak wymaganych wartości auth z komunikatem bez ujawniania sekretów
-- [x] 1.3 Build panelu oraz lint kończą się powodzeniem po dodaniu klienta Auth
-- [x] 1.6 Build obrazu panelu dla bieżącego deployu Fly kończy się powodzeniem z publicznymi wartościami `VITE_*` i bez wpisywania sekretów do obrazu
+- [x] 1.1 Narzędzie migracyjne backendu uruchamia migracje przeciwko lokalnej lub testowej PostgreSQL, obejmującą kancelarię, profil oraz unikalne powiązanie użytkownika z kancelarią — 072bb26
+- [x] 1.2 Konfiguracja backendu odrzuca brak wymaganych wartości auth z komunikatem bez ujawniania sekretów — 072bb26
+- [x] 1.3 Build panelu oraz lint kończą się powodzeniem po dodaniu klienta Auth — 072bb26
+- [x] 1.6 Build obrazu panelu dla bieżącego deployu Fly kończy się powodzeniem z publicznymi wartościami `VITE_*` i bez wpisywania sekretów do obrazu — 072bb26
 
 #### Manual
 
@@ -266,10 +266,10 @@ Migracja wprowadza nowe tabele w PostgreSQL na Fly, bez istniejących danych apl
 
 #### Automated
 
-- [x] 2.1 Testy API potwierdzają, że `/health` jest publiczne, a `/anonymize` zwraca 401 bez tokenu
-- [x] 2.2 Testy API potwierdzają 403 dla uwierzytelnionej tożsamości bez dozwolonego kontekstu kancelarii w PostgreSQL oraz sukces dla poprawnego kontekstu
-- [x] 2.3 Testy konfiguracji potwierdzają, że wildcard CORS nie jest używany w środowisku produkcyjnym
-- [x] 2.6 Testy konfiguracji potwierdzają, że produkcja wyłącza `/docs`, `/redoc` i `/openapi.json`, a środowisko lokalne je udostępnia
+- [x] 2.1 Testy API potwierdzają, że `/health` jest publiczne, a `/anonymize` zwraca 401 bez tokenu — 072bb26
+- [x] 2.2 Testy API potwierdzają 403 dla uwierzytelnionej tożsamości bez dozwolonego kontekstu kancelarii w PostgreSQL oraz sukces dla poprawnego kontekstu — 072bb26
+- [x] 2.3 Testy konfiguracji potwierdzają, że wildcard CORS nie jest używany w środowisku produkcyjnym — 072bb26
+- [x] 2.6 Testy konfiguracji potwierdzają, że produkcja wyłącza `/docs`, `/redoc` i `/openapi.json`, a środowisko lokalne je udostępnia — 072bb26
 
 #### Manual
 
@@ -280,9 +280,9 @@ Migracja wprowadza nowe tabele w PostgreSQL na Fly, bez istniejących danych apl
 
 #### Automated
 
-- [ ] 3.1 `npm run lint` kończy się bez błędów
-- [ ] 3.2 `npm run build` kończy się powodzeniem z publiczną konfiguracją Auth
-- [ ] 3.3 Testy komponentu lub kontraktu klienta pokrywają brak sesji, sesję odtworzoną i odpowiedzi 401/403
+- [x] 3.1 `npm run lint` kończy się bez błędów
+- [x] 3.2 `npm run build` kończy się powodzeniem z publiczną konfiguracją Auth
+- [x] 3.3 Testy komponentu lub kontraktu klienta pokrywają brak sesji, sesję odtworzoną i odpowiedzi 401/403
 
 #### Manual
 

@@ -1,7 +1,7 @@
 """Repository for atomically deriving an office from a verified Supabase user."""
 
 from sqlalchemy import func, select
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session
 
 from backend.app.models import Office, Profile
 
@@ -15,9 +15,7 @@ def get_or_create_profile_for_verified_user(session: Session, user_id: str) -> P
     """
     session.execute(select(func.pg_advisory_xact_lock(func.hashtext(user_id))))
     profile = session.scalar(
-        select(Profile)
-        .options(joinedload(Profile.office))
-        .where(Profile.user_id == user_id)
+        select(Profile).where(Profile.user_id == user_id)
         .with_for_update()
     )
     if profile is not None:
