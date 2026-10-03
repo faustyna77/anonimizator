@@ -49,6 +49,10 @@ Panel pozwala zarejestrować konto, zalogować się e-mailem i hasłem, odtworzy
 
 Supabase tworzy konto, a backend po zweryfikowaniu tokenu atomowo tworzy lub odczytuje relację konto → kancelaria w PostgreSQL na Fly. Panel utrzymuje sesję Supabase i dołącza token do wywołań produktu. Backend przekazuje zaufany kontekst handlerom; przyszłe slice’y użyją go dla dokumentów i reguł. Dla F-01 istniejący deploy panelu Fly buduje źródła z wyłącznie publicznymi wartościami `VITE_*`.
 
+## Regression-test boundary
+
+Testy auth zastępują dostawcę Supabase kontrolowanymi odpowiedziami i nie łączą się z prawdziwym projektem Auth. Integracja migracyjna używa wyłącznie `TEST_DATABASE_URL` wskazującego PostgreSQL z nazwą bazy zakończoną na `_test`; uruchamia Alembic, a następnie czyści tabele testowe. Testy potwierdzają publiczny `/health`, 401, 403, odizolowane konteksty dwóch kancelarii i ignorowanie `office_id` przesłanego przez klienta. Szczegóły uruchomienia znajdują się w `docs/environment.md`.
+
 ## Phases at a Glance
 
 | Phase | What it delivers | Key risk |

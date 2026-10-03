@@ -259,8 +259,8 @@ Migracja wprowadza nowe tabele w PostgreSQL na Fly, bez istniejących danych apl
 
 #### Manual
 
-- [ ] 1.4 Nowa rejestracja, a następnie pierwsze uwierzytelnione wywołanie backendu, tworzy jedno konto, profil i kancelarię bez ręcznej administracji
-- [ ] 1.5 Próba użycia przez inne konto kontekstu cudzej kancelarii nie zmienia ani nie zwraca cudzych danych
+- [x] 1.4 Nowa rejestracja, a następnie pierwsze uwierzytelnione wywołanie backendu, tworzy jedno konto, profil i kancelarię bez ręcznej administracji
+- [x] 1.5 Próba użycia przez inne konto kontekstu cudzej kancelarii nie zmienia ani nie zwraca cudzych danych
 
 ### Phase 2: Serwerowa ochrona tras
 
@@ -273,32 +273,32 @@ Migracja wprowadza nowe tabele w PostgreSQL na Fly, bez istniejących danych apl
 
 #### Manual
 
-- [ ] 2.4 Wywołanie `/anonymize` bez sesji otrzymuje czytelny brak dostępu, bez wyniku stubu
-- [ ] 2.5 Health check pozostaje dostępny bez konta
+- [x] 2.4 Wywołanie `/anonymize` bez sesji otrzymuje czytelny brak dostępu, bez wyniku stubu
+- [x] 2.5 Health check pozostaje dostępny bez konta
 
 ### Phase 3: Panel logowania i sesja
 
 #### Automated
 
-- [x] 3.1 `npm run lint` kończy się bez błędów
-- [x] 3.2 `npm run build` kończy się powodzeniem z publiczną konfiguracją Auth
-- [x] 3.3 Testy komponentu lub kontraktu klienta pokrywają brak sesji, sesję odtworzoną i odpowiedzi 401/403
+- [x] 3.1 `npm run lint` kończy się bez błędów — 32a1139
+- [x] 3.2 `npm run build` kończy się powodzeniem z publiczną konfiguracją Auth — 32a1139
+- [x] 3.3 Testy komponentu lub kontraktu klienta pokrywają brak sesji, sesję odtworzoną i odpowiedzi 401/403 — 32a1139
 
 #### Manual
 
-- [ ] 3.4 Użytkownik może zarejestrować konto, zalogować się, odświeżyć panel i pozostać zalogowany
-- [ ] 3.5 Po wylogowaniu panel nie pokazuje chronionej powierzchni ani nie wysyła tokenu do API
-- [ ] 3.6 Panel przedstawia czytelny komunikat przy 401 i 403
+- [x] 3.4 Użytkownik może zarejestrować konto, zalogować się, odświeżyć panel i pozostać zalogowany
+- [x] 3.5 Po wylogowaniu panel nie pokazuje chronionej powierzchni ani nie wysyła tokenu do API
+- [x] 3.6 Panel przedstawia czytelny komunikat przy 401 i 403
 
 ### Phase 4: Weryfikacja granicy dostępu
 
 #### Automated
 
-- [ ] 4.1 Zestaw testów backendu przechodzi lokalnie bez połączenia z produkcyjnym projektem Auth
-- [ ] 4.2 Build i lint panelu przechodzą razem z testami kontraktów dostępu
-- [ ] 4.3 Kontrola repozytorium potwierdza, że pliki konfiguracyjne nie zawierają kluczy serwerowych
+- [x] 4.1 Zestaw testów backendu przechodzi lokalnie bez połączenia z produkcyjnym projektem Auth
+- [x] 4.2 Build i lint panelu przechodzą razem z testami kontraktów dostępu
+- [x] 4.3 Kontrola repozytorium potwierdza, że pliki konfiguracyjne nie zawierają kluczy serwerowych
 
 #### Manual
 
-- [ ] 4.4 Dwa świeżo zarejestrowane konta nie mogą uzyskać dostępu do kontekstu drugiej kancelarii
-- [ ] 4.5 Przyszły implementer S-01 może wskazać jeden zaufany kontekst kancelarii bez dodawania nowego mechanizmu auth
+- [x] 4.4 Dwa świeżo zarejestrowane konta nie mogą uzyskać dostępu do kontekstu drugiej kancelarii
+- [x] 4.5 Przyszły implementer S-01 może wskazać jeden zaufany kontekst kancelarii bez dodawania nowego mechanizmu auth
