@@ -294,11 +294,11 @@ Migracja wprowadza nowe tabele w PostgreSQL na Fly, bez istniejących danych apl
 
 #### Automated
 
-- [x] 4.1 Zestaw testów backendu przechodzi lokalnie bez połączenia z produkcyjnym projektem Auth
-- [x] 4.2 Build i lint panelu przechodzą razem z testami kontraktów dostępu
-- [x] 4.3 Kontrola repozytorium potwierdza, że pliki konfiguracyjne nie zawierają kluczy serwerowych
+- [x] 4.1 Zestaw testów backendu przechodzi lokalnie bez połączenia z produkcyjnym projektem Auth — 94d00ae
+- [x] 4.2 Build i lint panelu przechodzą razem z testami kontraktów dostępu — 94d00ae
+- [x] 4.3 Kontrola repozytorium potwierdza, że pliki konfiguracyjne nie zawierają kluczy serwerowych — 94d00ae
 
 #### Manual
 
-- [x] 4.4 Dwa świeżo zarejestrowane konta nie mogą uzyskać dostępu do kontekstu drugiej kancelarii
-- [x] 4.5 Przyszły implementer S-01 może wskazać jeden zaufany kontekst kancelarii bez dodawania nowego mechanizmu auth
+- [x] 4.4 Dwa świeżo zarejestrowane konta nie mogą uzyskać dostępu do kontekstu drugiej kancelarii — 94d00ae
+- [x] 4.5 Przyszły implementer S-01 może wskazać jeden zaufany kontekst kancelarii bez dodawania nowego mechanizmu auth — 94d00ae
