@@ -3,6 +3,8 @@ uvicorn
 pdfplumber
 python-docx
 alembic>=1.14,<2
+boto3>=1.35,<2
+cryptography>=43,<46
 pydantic-settings>=2.7,<3
 psycopg[binary]>=3.2,<4
 SQLAlchemy>=2.0,<3

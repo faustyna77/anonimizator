@@ -24,6 +24,11 @@ class Settings(BaseSettings):
     supabase_url: Optional[str] = None
     supabase_anon_key: Optional[str] = None
     supabase_service_role_key: Optional[SecretStr] = None
+    s3_bucket: Optional[str] = None
+    s3_region: Optional[str] = None
+    aws_access_key_id: Optional[SecretStr] = None
+    aws_secret_access_key: Optional[SecretStr] = None
+    document_mapping_encryption_key: Optional[SecretStr] = None
 
     @property
     def public_auth_configuration(self) -> Dict[str, Optional[str]]:
@@ -67,6 +72,23 @@ class Settings(BaseSettings):
             raise RuntimeError(
                 "Missing required configuration for protected routes: "
                 + ", ".join(missing)
+            )
+
+    def require_document_storage_configuration(self) -> None:
+        """Fail document routes closed when their server-only storage secrets are absent."""
+        missing = []
+        for name, value in (
+            ("S3_BUCKET", self.s3_bucket),
+            ("S3_REGION", self.s3_region),
+            ("AWS_ACCESS_KEY_ID", self.aws_access_key_id),
+            ("AWS_SECRET_ACCESS_KEY", self.aws_secret_access_key),
+            ("DOCUMENT_MAPPING_ENCRYPTION_KEY", self.document_mapping_encryption_key),
+        ):
+            if value is None or (isinstance(value, SecretStr) and not value.get_secret_value()):
+                missing.append(name)
+        if missing:
+            raise RuntimeError(
+                "Missing required configuration for document storage: " + ", ".join(missing)
             )
 
 

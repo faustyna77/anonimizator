@@ -12,8 +12,15 @@ Copy `.env.example` to `.env` only for local development. Do not commit `.env`.
 | `SUPABASE_URL` | Protected backend routes and browser Auth client | Public URL |
 | `SUPABASE_ANON_KEY` | Protected backend routes and browser Auth client | Public key |
 | `SUPABASE_SERVICE_ROLE_KEY` | Future server-side Supabase admin operations | Server-only |
+| `S3_BUCKET` | Document original/result object storage | Server-only |
+| `S3_REGION` | AWS S3 client region for document storage | Server-only |
+| `AWS_ACCESS_KEY_ID` | S3 credentials for document routes | Server-only secret |
+| `AWS_SECRET_ACCESS_KEY` | S3 credentials for document routes | Server-only secret |
+| `DOCUMENT_MAPPING_ENCRYPTION_KEY` | Fernet key for encrypted document marker mappings | Server-only secret |
 
 `Settings.require_protected_route_configuration()` fails with variable names only when `DATABASE_URL`, `SUPABASE_URL`, or `SUPABASE_ANON_KEY` is missing. It never includes values in its error message. The service-role key remains server-only and must never be passed to the frontend.
+
+`Settings.require_document_storage_configuration()` is called only by document-storage routes. It requires `S3_BUCKET`, `S3_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, and `DOCUMENT_MAPPING_ENCRYPTION_KEY`, reports only missing variable names, and never serializes their values. Generate the Fernet key locally, configure all five values in the backend/Fly secret store, and never put them in `VITE_*`, `frontend/`, build arguments, API responses, or tracked configuration.
 
 Set `PANEL_ALLOWED_ORIGINS` to exact panel origins (for example, `https://panel.example.com`). Wildcard origins are rejected in production. `/health` is public; product routes require a verified bearer token and server-derived office context. API documentation (`/docs`, `/redoc`, `/openapi.json`) is available only in `development`, `local`, and `test` environments and is disabled in production.
 
@@ -47,7 +54,7 @@ The frontend build receives only these public variables:
 - `VITE_SUPABASE_ANON_KEY`
 - `VITE_API_BASE`
 
-The Fly GitHub workflow supplies them as build arguments. Keep server credentials and `DATABASE_URL` out of `frontend/`, `VITE_*`, Docker build arguments, and GitHub workflow build environments.
+The Fly GitHub workflow supplies them as build arguments. Keep server credentials, `DATABASE_URL`, S3 credentials, and `DOCUMENT_MAPPING_ENCRYPTION_KEY` out of `frontend/`, `VITE_*`, Docker build arguments, and GitHub workflow build environments.
 
 ## F-01 boundary for later slices
 

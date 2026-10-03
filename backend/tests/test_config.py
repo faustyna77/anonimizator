@@ -33,3 +33,27 @@ def test_public_auth_configuration_excludes_server_credentials(monkeypatch):
         "anon_key": "public-key",
     }
     assert "server-secret" not in settings.public_auth_configuration.values()
+
+
+def test_document_storage_configuration_rejects_missing_secrets_without_echoing_values(monkeypatch):
+    monkeypatch.setenv("S3_BUCKET", "private-bucket-name")
+    monkeypatch.setenv("S3_REGION", "private-region")
+    monkeypatch.setenv("AWS_ACCESS_KEY_ID", "private-access-key")
+    monkeypatch.setenv("AWS_SECRET_ACCESS_KEY", "private-secret-key")
+    monkeypatch.setenv("DOCUMENT_MAPPING_ENCRYPTION_KEY", "private-encryption-key")
+    monkeypatch.delenv("S3_REGION", raising=False)
+
+    settings = Settings(_env_file=None)
+
+    with pytest.raises(RuntimeError) as error:
+        settings.require_document_storage_configuration()
+
+    message = str(error.value)
+    assert "S3_REGION" in message
+    for value in (
+        "private-bucket-name",
+        "private-access-key",
+        "private-secret-key",
+        "private-encryption-key",
+    ):
+        assert value not in message

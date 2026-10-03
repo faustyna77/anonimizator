@@ -1,5 +1,4 @@
 """Shared fixtures for isolated backend access-boundary tests."""
-
 from __future__ import annotations
 
 import os
@@ -44,13 +43,13 @@ def migrated_session_factory(monkeypatch):
 
     engine = create_engine(database_url)
     with engine.begin() as connection:
-        connection.execute(text("TRUNCATE TABLE profiles, offices RESTART IDENTITY CASCADE"))
+        connection.execute(text("TRUNCATE TABLE documents, profiles, offices RESTART IDENTITY CASCADE"))
 
     factory = sessionmaker(bind=engine, autocommit=False, autoflush=False)
     yield factory
 
     with engine.begin() as connection:
-        connection.execute(text("TRUNCATE TABLE profiles, offices RESTART IDENTITY CASCADE"))
+        connection.execute(text("TRUNCATE TABLE documents, profiles, offices RESTART IDENTITY CASCADE"))
     engine.dispose()
     get_settings.cache_clear()
     get_engine.cache_clear()
