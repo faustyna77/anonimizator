@@ -11,7 +11,7 @@ from backend.app.models import Profile
 
 
 @pytest.mark.postgresql
-def test_anonymize_ignores_client_office_id_and_uses_the_verified_users_office(
+def test_anonymize_rejects_client_office_id_after_deriving_verified_users_office(
     migrated_session_factory, monkeypatch
 ):
     monkeypatch.setattr(auth, "get_session_factory", lambda: migrated_session_factory)
@@ -30,10 +30,11 @@ def test_anonymize_ignores_client_office_id_and_uses_the_verified_users_office(
     response = client.post(
         "/anonymize",
         headers={"Authorization": "Bearer controlled-token"},
-        json={"office_id": str(second_context.office_id)},
+        files={"file": ("synthetic.pdf", b"synthetic", "application/pdf")},
+        data={"office_id": str(second_context.office_id)},
     )
 
-    assert response.status_code == 200
+    assert response.status_code == 422
     with migrated_session_factory() as session:
         profiles = {
             profile.user_id: profile.office_id

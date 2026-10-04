@@ -48,7 +48,7 @@ Prawnicy ręcznie anonimizują dokumenty przed wysłaniem ich do narzędzi AI, c
 | ID | Change ID | Outcome (user can …) | Prerequisites | PRD refs | Status |
 | --- | --- | --- | --- | --- | --- |
 | F-01 | minimal-document-access | (foundation) granica dostępu oddziela dokumenty i reguły kancelarii | — | MS-03, MS-05 | done |
-| S-01 | document-anonymization-flow | wysłać PDF/DOCX i odebrać wersję ze znacznikami | F-01 | MS-01, MS-03 | proposed |
+| S-01 | document-anonymization-flow | wysłać PDF/DOCX i odebrać wersję ze znacznikami | F-01 | MS-01, MS-03 | in-progress |
 | S-02 | chrome-ai-anonymization | uruchomić anonimizację z rozszerzenia na aplikacji AI | S-01 | MS-02 | proposed |
 | S-03 | office-rules-management | zarządzać regułami i słownikami kancelarii | F-01, S-01 | MS-04, MS-05 | proposed |
 | S-04 | response-deanonymization | odwrócić znaczniki w odpowiedzi modelu | S-01, S-02 | MS-04 | proposed |
@@ -101,7 +101,7 @@ What's already in place in the codebase as of `2026-09-28` (auto-researched + us
 - **Unknowns:**
   - Jaka forma odebrania zanonimizowanego dokumentu jest wymagana w pilotażu? — Owner: user. Block: no.
 - **Risk:** Ten wycinek weryfikuje poprawność podstawowej wartości produktu; błędne lub niespójne znaczniki podważają użyteczność późniejszych funkcji.
-- **Status:** proposed
+- **Status:** in-progress
 
 ### S-02: Anonimizacja z rozszerzenia Chrome
 

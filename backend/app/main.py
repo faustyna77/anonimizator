@@ -1,13 +1,38 @@
-from typing import Optional
+from typing import Optional, Protocol
 
-from fastapi import Depends, FastAPI
+from fastapi import Depends, FastAPI, File, HTTPException, Request, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.openapi.utils import get_openapi
+from pydantic import BaseModel
 
 from backend.app.auth import AccessContext, get_current_access_context
 from backend.app.config import Settings, get_settings
+from backend.app.document_service import DocumentProcessingError, DocumentProcessingResult, DocumentProcessingService
+from backend.app.document_upload import UploadValidationError, parse_uploaded_document
 
 
-def create_app(settings: Optional[Settings] = None) -> FastAPI:
+class DocumentProcessor(Protocol):
+    def process_upload(
+        self,
+        access_context: AccessContext,
+        *,
+        content: bytes,
+        document_format: str,
+        content_type: str,
+    ) -> DocumentProcessingResult: ...
+
+
+class AnonymizedDocumentResponse(BaseModel):
+    document_id: str
+    document_format: str
+    size_bytes: int
+    status: str
+
+
+def create_app(
+    settings: Optional[Settings] = None,
+    document_service: Optional[DocumentProcessor] = None,
+) -> FastAPI:
     """Build the API with public health checks and protected product routes."""
     resolved_settings = settings if settings is not None else get_settings()
     docs_enabled = resolved_settings.exposes_api_documentation
@@ -28,11 +53,59 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
     def health():
         return {"status": "ok"}
 
-    @app.post("/anonymize")
-    async def anonymize(_: AccessContext = Depends(get_current_access_context)):
-        # Stub — core logic in src/anonymizer_prawniczy/ (scaffold per AGENTS.md)
-        return {"status": "anonymized", "backend": "anonimizator"}
+    @app.post("/anonymize", response_model=AnonymizedDocumentResponse)
+    async def anonymize(
+        request: Request,
+        file: UploadFile | None = File(default=None),
+        access_context: AccessContext = Depends(get_current_access_context),
+    ) -> AnonymizedDocumentResponse:
+        try:
+            uploaded_document = await parse_uploaded_document(await request.form())
+        except UploadValidationError as error:
+            raise HTTPException(status_code=422, detail=str(error)) from error
 
+        processor = document_service or DocumentProcessingService.from_settings(resolved_settings)
+        try:
+            result = processor.process_upload(
+                access_context,
+                content=uploaded_document.content,
+                document_format=uploaded_document.document_format,
+                content_type=uploaded_document.content_type,
+            )
+        except DocumentProcessingError as error:
+            raise HTTPException(status_code=422, detail=str(error)) from error
+        except Exception as error:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="The document could not be processed.",
+            ) from error
+        return AnonymizedDocumentResponse(
+            document_id=str(result.document_id),
+            document_format=result.document_format,
+            size_bytes=result.size_bytes,
+            status=result.status,
+        )
+
+    def custom_openapi():
+        if app.openapi_schema:
+            return app.openapi_schema
+        schema = get_openapi(title=app.title, version=app.version, routes=app.routes)
+        schema["paths"]["/anonymize"]["post"]["requestBody"] = {
+            "required": True,
+            "content": {
+                "multipart/form-data": {
+                    "schema": {
+                        "type": "object",
+                        "properties": {"file": {"type": "string", "format": "binary"}},
+                        "required": ["file"],
+                    }
+                }
+            },
+        }
+        app.openapi_schema = schema
+        return app.openapi_schema
+
+    app.openapi = custom_openapi
     return app
 
 

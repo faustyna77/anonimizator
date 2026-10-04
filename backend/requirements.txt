@@ -1,11 +1,12 @@
 fastapi
 uvicorn
-pdfplumber
+PyMuPDF>=1.28.2,<1.29
 python-docx
 alembic>=1.14,<2
 boto3>=1.35,<2
 cryptography>=43,<46
 pydantic-settings>=2.7,<3
+python-multipart>=0.0.20,<1
 psycopg[binary]>=3.2,<4
 SQLAlchemy>=2.0,<3
 supabase>=2.11,<3

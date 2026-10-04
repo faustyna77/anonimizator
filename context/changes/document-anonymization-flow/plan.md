@@ -252,27 +252,27 @@ Migracja dodaje tylko metadane dokumentów i zaszyfrowane mapowanie do PostgreSQ
 
 #### Automated
 
-- [x] 1.1 Migracja dokumentów przechodzi na lokalnej/testowej PostgreSQL i tworzy ograniczenia własności kancelarii
-- [x] 1.2 Konfiguracja odrzuca brak S3 i klucza szyfrowania bez ujawniania wartości
-- [x] 1.3 Test adaptera storage używa fałszywej implementacji i klucza obiektu z kancelarią
+- [x] 1.1 Migracja dokumentów przechodzi na lokalnej/testowej PostgreSQL i tworzy ograniczenia własności kancelarii — 2d453b4
+- [x] 1.2 Konfiguracja odrzuca brak S3 i klucza szyfrowania bez ujawniania wartości — 2d453b4
+- [x] 1.3 Test adaptera storage używa fałszywej implementacji i klucza obiektu z kancelarią — 2d453b4
 
 #### Manual
 
-- [x] 1.4 Przykładowa konfiguracja rozdziela wartości publiczne od sekretów S3 i szyfrowania
+- [x] 1.4 Przykładowa konfiguracja rozdziela wartości publiczne od sekretów S3 i szyfrowania — 2d453b4
 
 ### Phase 2: Chroniony upload i silnik anonimizacji
 
 #### Automated
 
-- [ ] 2.1 Testy API pokrywają 401, walidację uploadu i sukces z kontrolowanym AccessContext
-- [ ] 2.2 Testy jednostkowe pokrywają pięć klas danych, powtórzenia i numerację per dokument
-- [ ] 2.3 Testy PDF/DOCX zachowują format oraz usuwają wykryte dane z wyniku
-- [ ] 2.4 Testy integracyjne używają fałszywego S3 bez połączenia z AWS
+- [x] 2.1 Testy API pokrywają 401, walidację uploadu i sukces z kontrolowanym AccessContext
+- [x] 2.2 Testy jednostkowe pokrywają pięć klas danych, powtórzenia i numerację per dokument
+- [x] 2.3 Testy PDF/DOCX zachowują format oraz usuwają wykryte dane z wyniku
+- [x] 2.4 Testy integracyjne używają fałszywego S3 bez połączenia z AWS
 
 #### Manual
 
-- [ ] 2.5 Zalogowany użytkownik anonimizuje syntetyczny PDF i DOCX do 10 MB
-- [ ] 2.6 Skanowany PDF bez warstwy tekstowej ma czytelny błąd bez OCR
+- [x] 2.5 Zalogowany użytkownik anonimizuje syntetyczny PDF i DOCX do 10 MB
+- [x] 2.6 Skanowany PDF bez warstwy tekstowej ma czytelny błąd bez OCR
 
 ### Phase 3: Historia dokumentów i bezpieczne pobranie
 

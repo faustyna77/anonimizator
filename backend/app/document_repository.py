@@ -19,9 +19,11 @@ def create_processing_document(
     document_format: str,
     size_bytes: int,
     original_object_key: StorageObjectKey,
+    document_id: UUID | None = None,
 ) -> Document:
     """Create metadata using only the trusted office and profile from access context."""
     document = Document(
+        **({"id": document_id} if document_id is not None else {}),
         office_id=access_context.office_id,
         uploaded_by_profile_id=access_context.profile_id,
         document_format=document_format,
