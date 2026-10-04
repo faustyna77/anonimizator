@@ -1,10 +1,10 @@
 ---
 change_id: document-anonymization-flow
 title: Document anonymization flow
-status: implemented
+status: archived
 created: 2026-10-03
 updated: 2026-10-04
-archived_at: null
+archived_at: 2026-10-04T03:27:06Z
 ---
 
 ## Notes
