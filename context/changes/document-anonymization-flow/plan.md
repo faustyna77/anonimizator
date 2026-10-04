@@ -291,11 +291,11 @@ Migracja dodaje tylko metadane dokumentów i zaszyfrowane mapowanie do PostgreSQ
 
 #### Automated
 
-- [x] 4.1 Pełny backend przechodzi na `_test` PostgreSQL z fałszywym S3 i bez usług zewnętrznych
-- [x] 4.2 Pełny zestaw panelu, lint i build przechodzą bez błędów
-- [x] 4.3 Kontrola repozytorium potwierdza brak poświadczeń S3 i klucza szyfrowania
+- [x] 4.1 Pełny backend przechodzi na `_test` PostgreSQL z fałszywym S3 i bez usług zewnętrznych — 9c1d19c
+- [x] 4.2 Pełny zestaw panelu, lint i build przechodzą bez błędów — 9c1d19c
+- [x] 4.3 Kontrola repozytorium potwierdza brak poświadczeń S3 i klucza szyfrowania — 9c1d19c
 
 #### Manual
 
-- [x] 4.4 Dwa konta testowe widzą odrębne historie i pobierają tylko własne wyniki
-- [x] 4.5 Dokumentacja pozwala skonfigurować S3 i uruchomić testy bez wcześniejszej rozmowy
+- [x] 4.4 Dwa konta testowe widzą odrębne historie i pobierają tylko własne wyniki — 9c1d19c
+- [x] 4.5 Dokumentacja pozwala skonfigurować S3 i uruchomić testy bez wcześniejszej rozmowy — 9c1d19c
