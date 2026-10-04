@@ -23,6 +23,7 @@ TestResults.xml
 # Local application credentials
 .env
 .env.local
+chrome-extension/config.js
 .venv/
 __pycache__/
 *.py[cod]

@@ -1,42 +1,96 @@
-/**
- * Popup — komunikacja z backendem https://anonimizator.fly.dev
- */
-const BACKEND = "https://anonimizator.fly.dev";
+(() => {
+  const loginForm = document.getElementById('loginForm');
+  const loginFields = document.getElementById('loginFields');
+  const loginButton = document.getElementById('loginButton');
+  const logoutButton = document.getElementById('logoutButton');
+  const passwordInput = document.getElementById('password');
+  const sessionState = document.getElementById('sessionState');
+  const status = document.getElementById('status');
 
-const filePicker = document.getElementById("filePicker");
-const fileName = document.getElementById("fileName");
-const status = document.getElementById("status");
-let currentFile = null;
+  let auth = null;
 
-filePicker.addEventListener("change", (e) => {
-  currentFile = e.target.files[0] || null;
-  fileName.textContent = currentFile ? currentFile.name + " (" + Math.round(currentFile.size/1024) + " KB)" : "Brak pliku";
-});
+  function setStatus(message) {
+    status.textContent = message;
+  }
 
-document.getElementById("btnSend").addEventListener("click", async () => {
-  status.textContent = "Wysyłanie do " + BACKEND + " ...";
-  chrome.runtime.sendMessage({
-    action: "anonymous",
-    path: "/anonymize",
-    method: "POST",
-    body: currentFile ? { fileName: currentFile.name, size: currentFile.size, source: "chrome-extension" } : { source: "chrome-extension", test: true }
-  }, (res) => {
-    if (!res) { status.textContent = "Brak odpowiedzi (sprawdź backend / CORS)."; return; }
-    status.textContent = res.ok ? "Odpowiedź: " + JSON.stringify(res.data) : "Błąd: " + (res.error || "—");
+  function renderSession(summary) {
+    const signedIn = Boolean(summary?.email);
+    loginForm.hidden = signedIn;
+    logoutButton.hidden = !signedIn;
+    sessionState.hidden = !signedIn;
+    sessionState.textContent = signedIn ? `Zalogowano jako ${summary.email}.` : '';
+  }
+
+  async function getActiveTabUrl() {
+    const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    return activeTab?.url;
+  }
+
+  async function initialize() {
+    let isAllowedContext = false;
+    try {
+      const [{ isAllowedAiUrl }, { createSupabaseAuth }] = await Promise.all([
+        import('./src/context.mjs'),
+        import('./src/auth.mjs'),
+        import('./config.js'),
+      ]);
+      isAllowedContext = isAllowedAiUrl(await getActiveTabUrl());
+      if (!isAllowedContext) {
+        loginFields.disabled = true;
+        setStatus('Rozszerzenie działa wyłącznie na http://127.0.0.1:5173/.');
+        return;
+      }
+
+      auth = createSupabaseAuth({
+        chromeApi: chrome,
+        config: globalThis.extensionConfig,
+      });
+      renderSession(await auth.getSessionSummary());
+    } catch {
+      loginFields.disabled = true;
+      setStatus('Nie można przygotować bezpiecznej sesji. Sprawdź lokalną konfigurację.');
+    }
+  }
+
+  loginForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (!auth || loginFields.disabled) {
+      return;
+    }
+
+    const email = document.getElementById('email').value;
+    const password = passwordInput.value;
+    loginButton.disabled = true;
+    setStatus('Logowanie…');
+
+    try {
+      renderSession(await auth.signIn({ email, password }));
+      setStatus('Sesja została bezpiecznie zapisana.');
+    } catch {
+      setStatus('Nie udało się zalogować. Sprawdź dane i spróbuj ponownie.');
+    } finally {
+      passwordInput.value = '';
+      loginButton.disabled = false;
+    }
   });
-});
 
-document.getElementById("btnCheck").addEventListener("click", async () => {
-  status.textContent = "Sprawdzam /health ...";
-  chrome.runtime.sendMessage({
-    action: "anonymous",
-    path: "/health",
-    method: "GET"
-  }, (res) => {
-    status.textContent = res && res.ok ? "OK — backend dostępny. " + JSON.stringify(res.data) : "Błąd / brak odpowiedzi (backend down / CORS).";
+  logoutButton.addEventListener('click', async () => {
+    if (!auth) {
+      return;
+    }
+
+    logoutButton.disabled = true;
+    try {
+      await auth.signOut();
+      renderSession(null);
+      setStatus('Wylogowano.');
+    } catch {
+      renderSession(null);
+      setStatus('Lokalna sesja została usunięta.');
+    } finally {
+      logoutButton.disabled = false;
+    }
   });
-});
 
-chrome.storage.local.get(["backend"], (r) => {
-  if (r.backend) document.getElementById("backend").textContent = "Backend: " + r.backend;
-});
+  void initialize();
+})();
