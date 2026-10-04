@@ -22,6 +22,32 @@ Copy `.env.example` to `.env` only for local development. Do not commit `.env`.
 
 `Settings.require_document_storage_configuration()` is called only by document-storage routes. It requires `S3_BUCKET`, `S3_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, and `DOCUMENT_MAPPING_ENCRYPTION_KEY`, reports only missing variable names, and never serializes their values. Generate the Fernet key locally, configure all five values in the backend/Fly secret store, and never put them in `VITE_*`, `frontend/`, build arguments, API responses, or tracked configuration.
 
+### S-01 storage setup and data lifecycle
+
+Create a private S3 bucket and provide the five document-storage settings above only to the backend process. The S3 identity needs access only to the document bucket; keep those credentials and the Fernet key in local backend configuration or the Fly secret store, never in this repository.
+
+For every accepted S-01 document, the backend derives the office and document identifiers from the verified `AccessContext`. It retains the original upload and the anonymized result as separate S3 objects under that server-generated key. PostgreSQL contains document metadata plus the Fernet-encrypted marker mapping, not file content. The client can receive safe history metadata and a short-lived URL for an owned, ready anonymized result only. There is no S-01 endpoint for originals, S3 object keys, or marker mappings.
+
+### S-01 local test isolation
+
+Backend unit, API, format, and storage tests use synthetic documents, a fake S3 client, and a controlled Auth provider. They must not require real AWS, Supabase, Fly, or document-storage secrets. PostgreSQL integration tests require `TEST_DATABASE_URL`; the fixture accepts only a PostgreSQL database whose name ends in `_test`, applies Alembic there, and truncates test data before and after each test.
+
+```bash
+python3.11 -m venv .venv
+.venv/bin/pip install -r backend/requirements-dev.txt
+TEST_DATABASE_URL='postgresql+psycopg://postgres:postgres@localhost:5432/anonimizator_test' \
+  .venv/bin/python -m pytest
+```
+
+The repository's pytest configuration limits this gate to `backend/tests` and labels database-dependent tests with the `postgresql` marker. Frontend verification is independent and does not need server secrets:
+
+```bash
+cd frontend
+npm test
+npm run lint
+npm run build
+```
+
 Set `PANEL_ALLOWED_ORIGINS` to exact panel origins (for example, `https://panel.example.com`). Wildcard origins are rejected in production. `/health` is public; product routes require a verified bearer token and server-derived office context. API documentation (`/docs`, `/redoc`, `/openapi.json`) is available only in `development`, `local`, and `test` environments and is disabled in production.
 
 ## Migrations
@@ -56,6 +82,8 @@ The frontend build receives only these public variables:
 
 The Fly GitHub workflow supplies them as build arguments. Keep server credentials, `DATABASE_URL`, S3 credentials, and `DOCUMENT_MAPPING_ENCRYPTION_KEY` out of `frontend/`, `VITE_*`, Docker build arguments, and GitHub workflow build environments.
 
-## F-01 boundary for later slices
+## S-01 and later-slice boundary
 
-S-01 document storage and S-03 office rules must consume the backend's `get_current_access_context` dependency as the sole source of the trusted user and office IDs. They must not accept client-selected office IDs or introduce a second authentication mechanism. Chrome-extension authentication and document storage remain outside F-01.
+S-01 document storage and S-03 office rules consume the backend's `get_current_access_context` dependency as the sole source of trusted user and office IDs. They must not accept client-selected office IDs or introduce a second authentication mechanism.
+
+S-01 includes single PDF/DOCX upload, anonymization, storage, history, and owned-result download. It excludes OCR and scanned PDFs without a usable text layer, batch upload, files above 10 MB, direct original or mapping access, and browser-to-S3 access. S-02 owns Chrome-extension authentication and document transfer. S-03 owns office rules and manual marker correction. S-04 owns reversing markers from the encrypted mapping; S-01 never exposes that mapping to a client.

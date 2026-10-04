@@ -278,24 +278,24 @@ Migracja dodaje tylko metadane dokumentów i zaszyfrowane mapowanie do PostgreSQ
 
 #### Automated
 
-- [x] 3.1 Testy API blokują listę i pobranie wyniku przez drugą kancelarię
-- [x] 3.2 Testy klienta pokrywają multipart z tokenem, limit 10 MB i komunikaty błędów
-- [x] 3.3 npm run test, npm run lint i npm run build przechodzą bez błędów
+- [x] 3.1 Testy API blokują listę i pobranie wyniku przez drugą kancelarię — 0397d0b
+- [x] 3.2 Testy klienta pokrywają multipart z tokenem, limit 10 MB i komunikaty błędów — 0397d0b
+- [x] 3.3 npm run test, npm run lint i npm run build przechodzą bez błędów — 0397d0b
 
 #### Manual
 
-- [x] 3.4 Panel pokazuje tylko własne wyniki po odświeżeniu i pobiera wersję zanonimizowaną
-- [x] 3.5 Druga kancelaria nie widzi ani nie pobiera wyniku pierwszej kancelarii
+- [x] 3.4 Panel pokazuje tylko własne wyniki po odświeżeniu i pobiera wersję zanonimizowaną — 0397d0b
+- [x] 3.5 Druga kancelaria nie widzi ani nie pobiera wyniku pierwszej kancelarii — 0397d0b
 
 ### Phase 4: Regresje, granice danych i dokumentacja S3
 
 #### Automated
 
-- [ ] 4.1 Pełny backend przechodzi na `_test` PostgreSQL z fałszywym S3 i bez usług zewnętrznych
-- [ ] 4.2 Pełny zestaw panelu, lint i build przechodzą bez błędów
-- [ ] 4.3 Kontrola repozytorium potwierdza brak poświadczeń S3 i klucza szyfrowania
+- [x] 4.1 Pełny backend przechodzi na `_test` PostgreSQL z fałszywym S3 i bez usług zewnętrznych
+- [x] 4.2 Pełny zestaw panelu, lint i build przechodzą bez błędów
+- [x] 4.3 Kontrola repozytorium potwierdza brak poświadczeń S3 i klucza szyfrowania
 
 #### Manual
 
-- [ ] 4.4 Dwa konta testowe widzą odrębne historie i pobierają tylko własne wyniki
-- [ ] 4.5 Dokumentacja pozwala skonfigurować S3 i uruchomić testy bez wcześniejszej rozmowy
+- [x] 4.4 Dwa konta testowe widzą odrębne historie i pobierają tylko własne wyniki
+- [x] 4.5 Dokumentacja pozwala skonfigurować S3 i uruchomić testy bez wcześniejszej rozmowy

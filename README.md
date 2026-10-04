@@ -1,22 +1,42 @@
 # anonimizator
 
-## F-01: minimalna granica dostępu
+S-01 is a protected, single-document anonymization flow for legal offices. An authenticated lawyer can upload one PDF or DOCX up to 10 MB, receive an anonymized file in the same format, and later download only that anonymized result from their office-scoped history.
 
-F-01 zapewnia logowanie panelu przez Supabase Auth oraz zaufany kontekst jednej kancelarii dla każdego zweryfikowanego użytkownika. Backend wyprowadza `office_id` wyłącznie z relacji `profiles.user_id → profiles.office_id` w PostgreSQL. Klient nie wybiera kancelarii i przesłane przez niego `office_id` nie stanowi podstawy autoryzacji.
+## S-01 data boundary
 
-Publiczny pozostaje tylko `GET /health`. Trasy produktu, w tym `POST /anonymize`, wymagają tokenu bearer i zwracają 401 dla brakującego albo nieważnego tokenu oraz 403, gdy serwer nie może uzyskać kontekstu kancelarii. Szczegóły zmiennych środowiskowych i wdrożenia opisuje [docs/environment.md](docs/environment.md).
+The backend derives the trusted user, profile, and office solely from `AccessContext`. The browser never submits an office identifier, S3 object key, or marker mapping.
 
-### Lokalna weryfikacja regresji
+- The original upload and anonymized result are retained in S3 under a server-derived office and document key.
+- PostgreSQL stores document metadata and the encrypted marker mapping; it does not store document file contents.
+- The panel can list safe metadata and receive a five-minute, server-authorized URL for a ready anonymized result.
+- S-01 provides no route to download an original or read an encrypted mapping. It does not give the browser direct S3 access.
 
-Zainstaluj zależności deweloperskie i uruchom testy z oddzielną lokalną/testową PostgreSQL. Zmienna musi wskazywać bazę, której nazwa kończy się na `_test`; test fixture uruchamia migracje Alembic i czyści wyłącznie tę bazę. Testy zastępują integrację Supabase kontrolowanym dostawcą, więc nie łączą się z projektem Auth ani z bazą Fly.
+## Server-only S3 configuration
+
+Create a private bucket and configure its server-only credentials in local backend configuration or the Fly secret store. Required names are:
+
+- `S3_BUCKET`
+- `S3_REGION`
+- `AWS_ACCESS_KEY_ID`
+- `AWS_SECRET_ACCESS_KEY`
+- `DOCUMENT_MAPPING_ENCRYPTION_KEY`
+
+Generate and store the Fernet mapping-encryption key outside the repository. Do not put any of these names or values in `VITE_*`, `frontend/`, Docker build arguments, API responses, or tracked local configuration. Copy `.env.example` for local setup; it contains placeholders only. See [docs/environment.md](docs/environment.md) for the complete configuration boundary.
+
+## Local regression gate
+
+Install backend development dependencies, create a disposable local PostgreSQL database whose name ends in `_test`, then run the backend suite from the repository root:
 
 ```bash
+python3.11 -m venv .venv
 .venv/bin/pip install -r backend/requirements-dev.txt
 TEST_DATABASE_URL='postgresql+psycopg://postgres:postgres@localhost:5432/anonimizator_test' \
-  .venv/bin/pytest
+  .venv/bin/python -m pytest
 ```
 
-Panelowe testy kontraktu, lint i build uruchamia się z katalogu `frontend/` wyłącznie z publicznymi zmiennymi `VITE_*`:
+`TEST_DATABASE_URL` is required only for PostgreSQL-marked integration tests. The fixture rejects a non-PostgreSQL URL or a database name not ending in `_test`, runs Alembic only against that database, and cleans its document, profile, and office data. Unit and API tests use a fake S3 client and a controlled Auth provider, so the suite does not require AWS, Supabase, or Fly credentials.
+
+Run the independent panel gate from `frontend/`:
 
 ```bash
 npm test
@@ -24,6 +44,8 @@ npm run lint
 npm run build
 ```
 
-### Poza zakresem F-01
+## S-01 scope boundary
 
-F-01 nie dodaje przechowywania, pobierania ani anonimizacji dokumentów. Nie zmienia też uwierzytelniania rozszerzenia Chrome ani transferu plików z rozszerzenia; te elementy należą odpowiednio do S-01 i S-02. S-01 i S-03 mają wykorzystywać istniejącą zależność `get_current_access_context`, bez dodawania drugiego mechanizmu uwierzytelniania.
+S-01 supports text-layer PDF and DOCX anonymization for PESEL, NIP, e-mail, telephone, and IBAN values. OCR and scanned PDFs without a usable text layer, batch upload, and files larger than 10 MB are outside this slice.
+
+The Chrome extension's authentication and document transfer belong to S-02. Office rules and manual marker correction belong to S-03. Reversing markers from the encrypted mapping belongs to S-04. None of those capabilities is implemented by S-01.
