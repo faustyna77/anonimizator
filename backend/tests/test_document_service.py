@@ -89,11 +89,13 @@ def test_service_persists_synthetic_original_result_and_encrypted_mapping_with_f
     result = service.process_upload(
         _context(),
         content=_docx_bytes("Synthetic identifier 44051401458."),
+        original_filename="synthetic.docx",
         document_format="docx",
         content_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     )
 
     assert result.document_format == "docx"
+    assert result.original_filename == "synthetic.docx"
     assert result.status == "ready"
     assert created[0].status == "ready"
     assert len(fake_s3.objects) == 2
@@ -131,6 +133,7 @@ def test_service_marks_document_failed_after_a_controlled_format_error(monkeypat
         service.process_upload(
             _context(),
             content=b"not-a-pdf",
+            original_filename="synthetic.pdf",
             document_format="pdf",
             content_type="application/pdf",
         )

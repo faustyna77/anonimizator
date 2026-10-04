@@ -16,6 +16,7 @@ def create_processing_document(
     session: Session,
     access_context: AccessContext,
     *,
+    original_filename: str,
     document_format: str,
     size_bytes: int,
     original_object_key: StorageObjectKey,
@@ -26,6 +27,7 @@ def create_processing_document(
         **({"id": document_id} if document_id is not None else {}),
         office_id=access_context.office_id,
         uploaded_by_profile_id=access_context.profile_id,
+        original_filename=original_filename,
         document_format=document_format,
         size_bytes=size_bytes,
         status="processing",
@@ -46,6 +48,17 @@ def get_document_for_access_context(
         select(Document).where(
             Document.id == document_id,
             Document.office_id == access_context.office_id,
+        )
+    )
+
+
+def list_documents_for_access_context(session: Session, access_context: AccessContext) -> list[Document]:
+    """List document metadata only inside the server-derived office scope."""
+    return list(
+        session.scalars(
+            select(Document)
+            .where(Document.office_id == access_context.office_id)
+            .order_by(Document.created_at.desc(), Document.id.desc())
         )
     )
 

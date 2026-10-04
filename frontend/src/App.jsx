@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-import { ApiAccessError, createProductApi } from './api.js';
+import { ApiAccessError, createProductApi, validateDocumentUpload } from './api.js';
 import {
   createSupabaseAuthClient,
   restoreSession,
@@ -20,7 +20,11 @@ function App() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [authMessage, setAuthMessage] = useState('');
-  const [accessMessage, setAccessMessage] = useState('');
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [documents, setDocuments] = useState([]);
+  const [documentMessage, setDocumentMessage] = useState('');
+  const [isUploading, setIsUploading] = useState(false);
+  const [downloadingDocumentId, setDownloadingDocumentId] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
@@ -69,7 +73,7 @@ function App() {
   async function handleAuthentication(event) {
     event.preventDefault();
     setAuthMessage('');
-    setAccessMessage('');
+    setDocumentMessage('');
     setIsSubmitting(true);
 
     try {
@@ -94,39 +98,104 @@ function App() {
 
   async function handleSignOut() {
     setAuthMessage('');
-    setAccessMessage('');
+    setDocumentMessage('');
 
     try {
       await signOut(authClient);
       setSession(null);
       setMode('sign-in');
+      setDocuments([]);
+      setSelectedFile(null);
     } catch (error) {
       setAuthMessage(error.message || 'Nie udało się wylogować użytkownika.');
     }
   }
 
-  async function handleAccessCheck() {
-    setAccessMessage('');
-    const api = createProductApi({
+  function productApi() {
+    return createProductApi({
       baseUrl: API_BASE,
       getAccessToken: async () => session?.access_token ?? null,
     });
+  }
 
-    try {
-      await api.anonymize();
-      setAccessMessage('Dostęp do chronionej powierzchni panelu został potwierdzony.');
-    } catch (error) {
-      if (error instanceof ApiAccessError && error.code === 'UNAUTHORIZED') {
-        try {
-          await signOut(authClient);
-        } catch {
-          // The expired token is never reused even if remote sign-out cannot complete.
-        }
-        setSession(null);
-        setMode('sign-in');
+  async function handleProductError(error, fallbackMessage) {
+    if (error instanceof ApiAccessError && error.code === 'UNAUTHORIZED') {
+      try {
+        await signOut(authClient);
+      } catch {
+        // The expired token is never reused even if remote sign-out cannot complete.
       }
+      setSession(null);
+      setMode('sign-in');
+      setDocuments([]);
+    }
+    return error.message || fallbackMessage;
+  }
 
-      setAccessMessage(error.message || 'Nie udało się potwierdzić dostępu do panelu.');
+  async function loadDocuments() {
+    try {
+      setDocuments(await productApi().listDocuments());
+    } catch (error) {
+      setDocumentMessage(await handleProductError(error, 'Nie udało się pobrać historii dokumentów.'));
+    }
+  }
+
+  useEffect(() => {
+    if (!session) {
+      setDocuments([]);
+      return undefined;
+    }
+    void loadDocuments();
+    return undefined;
+  }, [session]);
+
+  function handleFileSelection(event) {
+    const file = event.target.files?.[0] || null;
+    setDocumentMessage('');
+    if (!file) {
+      setSelectedFile(null);
+      return;
+    }
+    try {
+      validateDocumentUpload(file);
+      setSelectedFile(file);
+    } catch (error) {
+      setSelectedFile(null);
+      setDocumentMessage(error.message || 'Wybierz prawidłowy plik.');
+      event.target.value = '';
+    }
+  }
+
+  async function handleUpload(event) {
+    event.preventDefault();
+    setDocumentMessage('');
+    if (!selectedFile) {
+      setDocumentMessage('Wybierz jeden plik PDF lub DOCX.');
+      return;
+    }
+    setIsUploading(true);
+    try {
+      await productApi().uploadDocument(selectedFile);
+      setSelectedFile(null);
+      setDocumentMessage('Dokument został zanonimizowany i jest gotowy do pobrania.');
+      await loadDocuments();
+    } catch (error) {
+      setDocumentMessage(await handleProductError(error, 'Nie udało się przesłać dokumentu.'));
+    } finally {
+      setIsUploading(false);
+    }
+  }
+
+  async function handleDownload(documentId) {
+    setDocumentMessage('');
+    setDownloadingDocumentId(documentId);
+    try {
+      const { download_url: downloadUrl } = await productApi().getAnonymizedDownload(documentId);
+      window.location.assign(downloadUrl);
+    } catch (error) {
+      setDocumentMessage(await handleProductError(error, 'Nie udało się pobrać wyniku anonimizacji.'));
+    } finally {
+      setDownloadingDocumentId(null);
     }
   }
 
@@ -145,11 +214,48 @@ function App() {
           <button type="button" onClick={handleSignOut}>Wyloguj</button>
         </header>
 
-        <section className="panel__card" aria-labelledby="protected-surface-title">
-          <h2 id="protected-surface-title">Chroniona powierzchnia produktu</h2>
-          <p>Ta część panelu jest dostępna wyłącznie z aktywną sesją.</p>
-          <button type="button" onClick={handleAccessCheck}>Sprawdź dostęp</button>
-          {accessMessage && <p role="status">{accessMessage}</p>}
+        <section className="panel__card" aria-labelledby="document-upload-title">
+          <h2 id="document-upload-title">Anonimizacja dokumentu</h2>
+          <p>Prześlij jeden plik PDF lub DOCX o rozmiarze do 10 MB.</p>
+          <form onSubmit={handleUpload} className="panel__upload-form">
+            <label htmlFor="document-file">Plik do anonimizacji</label>
+            <input
+              id="document-file"
+              type="file"
+              accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+              onChange={handleFileSelection}
+            />
+            {selectedFile && <p>Wybrano: {selectedFile.name}</p>}
+            <button type="submit" disabled={isUploading}>
+              {isUploading ? 'Przesyłanie…' : 'Anonimizuj dokument'}
+            </button>
+          </form>
+          {documentMessage && <p role="status">{documentMessage}</p>}
+        </section>
+
+        <section className="panel__card" aria-labelledby="document-history-title">
+          <h2 id="document-history-title">Historia dokumentów</h2>
+          {documents.length === 0 ? (
+            <p>Nie przesłano jeszcze dokumentów.</p>
+          ) : (
+            <ul className="panel__document-list">
+              {documents.map((document) => (
+                <li key={document.document_id}>
+                  <div>
+                    <strong>{document.original_filename || 'Dokument bez nazwy'}</strong>
+                    <p>{document.document_format.toUpperCase()} · {document.status}</p>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={document.status !== 'ready' || downloadingDocumentId === document.document_id}
+                    onClick={() => handleDownload(document.document_id)}
+                  >
+                    {downloadingDocumentId === document.document_id ? 'Przygotowywanie…' : 'Pobierz wynik'}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
         </section>
       </main>
     );

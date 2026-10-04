@@ -31,6 +31,8 @@ def test_document_metadata_has_office_owned_storage_fields_and_private_mapping()
     assert "ix_documents_office_id" in indexes
     assert Document.__table__.c.office_id.nullable is False
     assert Document.__table__.c.uploaded_by_profile_id.nullable is False
+    assert Document.__table__.c.original_filename.nullable is True
+    assert Document.__table__.c.original_filename.type.length == 255
     assert Document.__table__.c.encrypted_mapping.type.python_type is bytes
     status_constraint = next(
         constraint

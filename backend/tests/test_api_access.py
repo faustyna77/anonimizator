@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from typing import Optional
 from uuid import UUID
 
@@ -7,7 +8,11 @@ import pytest
 
 from backend.app.auth import AccessContext, get_current_access_context
 from backend.app.config import Settings
-from backend.app.document_service import DocumentProcessingError, DocumentProcessingResult
+from backend.app.document_service import (
+    DocumentHistoryEntry,
+    DocumentProcessingError,
+    DocumentProcessingResult,
+)
 from backend.app.main import create_app
 
 
@@ -15,17 +20,19 @@ class FakeDocumentService:
     def __init__(self):
         self.calls = []
 
-    def process_upload(self, access_context, *, content, document_format, content_type):
+    def process_upload(self, access_context, *, content, original_filename, document_format, content_type):
         self.calls.append(
             {
                 "access_context": access_context,
                 "content": content,
+                "original_filename": original_filename,
                 "document_format": document_format,
                 "content_type": content_type,
             }
         )
         return DocumentProcessingResult(
             document_id=UUID("00000000-0000-0000-0000-000000000003"),
+            original_filename=original_filename,
             document_format=document_format,
             size_bytes=len(content),
             status="ready",
@@ -37,12 +44,29 @@ class FailingDocumentService:
         raise DocumentProcessingError("PDF text layer is unavailable; OCR is not supported in this MVP.")
 
 
+class FakeDocumentAccessService:
+    def __init__(self, entries_by_office, download_urls):
+        self.entries_by_office = entries_by_office
+        self.download_urls = download_urls
+        self.list_calls = []
+        self.download_calls = []
+
+    def list_documents(self, access_context):
+        self.list_calls.append(access_context)
+        return tuple(self.entries_by_office.get(access_context.office_id, ()))
+
+    def create_anonymized_download_url(self, access_context, document_id):
+        self.download_calls.append((access_context, document_id))
+        return self.download_urls.get((access_context.office_id, document_id))
+
+
 def build_client(
-    settings: Optional[Settings] = None, document_service=None
+    settings: Optional[Settings] = None, document_service=None, document_access_service=None
 ) -> tuple[TestClient, FastAPI]:
     app = create_app(
         settings or Settings(panel_allowed_origins="http://panel.test"),
         document_service=document_service,
+        document_access_service=document_access_service,
     )
     return TestClient(app), app
 
@@ -142,6 +166,7 @@ def test_anonymize_succeeds_with_a_server_derived_office_context_without_private
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == {
         "document_id": "00000000-0000-0000-0000-000000000003",
+        "original_filename": "synthetic.pdf",
         "document_format": "pdf",
         "size_bytes": 13,
         "status": "ready",
@@ -150,12 +175,91 @@ def test_anonymize_succeeds_with_a_server_derived_office_context_without_private
         {
             "access_context": context,
             "content": b"synthetic PDF",
+            "original_filename": "synthetic.pdf",
             "document_format": "pdf",
             "content_type": "application/pdf",
         }
     ]
     assert "office_id" not in response.text
     assert "mapping" not in response.text
+
+
+def test_anonymize_returns_a_safe_basename_for_uploaded_filename_metadata():
+    service = FakeDocumentService()
+    client, app = build_client(document_service=service)
+    app.dependency_overrides[get_current_access_context] = _context
+
+    response = client.post(
+        "/anonymize",
+        headers={"Authorization": "Bearer controlled-token"},
+        files=_controlled_file(filename="C:\\restricted\\umowa.pdf"),
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()["original_filename"] == "umowa.pdf"
+    assert service.calls[0]["original_filename"] == "umowa.pdf"
+
+
+def test_documents_and_download_routes_use_the_server_derived_office_context():
+    first_context = _context()
+    second_context = AccessContext(
+        user_id="second-controlled-user",
+        profile_id=UUID("00000000-0000-0000-0000-000000000004"),
+        office_id=UUID("00000000-0000-0000-0000-000000000005"),
+    )
+    document_id = UUID("00000000-0000-0000-0000-000000000003")
+    access_service = FakeDocumentAccessService(
+        {
+            first_context.office_id: (
+                DocumentHistoryEntry(
+                    document_id=document_id,
+                    original_filename="umowa-klienta.pdf",
+                    document_format="pdf",
+                    size_bytes=42,
+                    status="ready",
+                    created_at=datetime(2026, 10, 4, tzinfo=timezone.utc),
+                ),
+            )
+        },
+        {(first_context.office_id, document_id): "https://storage.example.test/temporary-result"},
+    )
+    client, app = build_client(
+        document_service=FakeDocumentService(), document_access_service=access_service
+    )
+    app.dependency_overrides[get_current_access_context] = lambda: first_context
+
+    history = client.get("/documents", headers={"Authorization": "Bearer controlled-token"})
+    own_download = client.get(
+        f"/documents/{document_id}/anonymized-download",
+        headers={"Authorization": "Bearer controlled-token"},
+    )
+    app.dependency_overrides[get_current_access_context] = lambda: second_context
+    cross_office_history = client.get("/documents", headers={"Authorization": "Bearer controlled-token"})
+    cross_office_download = client.get(
+        f"/documents/{document_id}/anonymized-download",
+        headers={"Authorization": "Bearer controlled-token"},
+    )
+
+    assert history.json() == [
+        {
+            "document_id": str(document_id),
+            "original_filename": "umowa-klienta.pdf",
+            "document_format": "pdf",
+            "size_bytes": 42,
+            "status": "ready",
+            "created_at": "2026-10-04T00:00:00Z",
+        }
+    ]
+    assert "object_key" not in history.text
+    assert "mapping" not in history.text
+    assert own_download.json() == {"download_url": "https://storage.example.test/temporary-result"}
+    assert cross_office_history.json() == []
+    assert cross_office_download.status_code == status.HTTP_404_NOT_FOUND
+    assert access_service.list_calls == [first_context, second_context]
+    assert access_service.download_calls == [
+        (first_context, document_id),
+        (second_context, document_id),
+    ]
 
 
 def test_anonymize_returns_a_controlled_processing_error():

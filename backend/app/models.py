@@ -89,6 +89,7 @@ class Document(Base):
         nullable=False,
     )
     uploaded_by_profile_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), nullable=False)
+    original_filename: Mapped[str | None] = mapped_column(String(255), nullable=True)
     document_format: Mapped[str] = mapped_column(String(10), nullable=False)
     size_bytes: Mapped[int] = mapped_column(Integer, nullable=False)
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="processing")

@@ -264,28 +264,28 @@ Migracja dodaje tylko metadane dokumentów i zaszyfrowane mapowanie do PostgreSQ
 
 #### Automated
 
-- [x] 2.1 Testy API pokrywają 401, walidację uploadu i sukces z kontrolowanym AccessContext
-- [x] 2.2 Testy jednostkowe pokrywają pięć klas danych, powtórzenia i numerację per dokument
-- [x] 2.3 Testy PDF/DOCX zachowują format oraz usuwają wykryte dane z wyniku
-- [x] 2.4 Testy integracyjne używają fałszywego S3 bez połączenia z AWS
+- [x] 2.1 Testy API pokrywają 401, walidację uploadu i sukces z kontrolowanym AccessContext — 42e1cee
+- [x] 2.2 Testy jednostkowe pokrywają pięć klas danych, powtórzenia i numerację per dokument — 42e1cee
+- [x] 2.3 Testy PDF/DOCX zachowują format oraz usuwają wykryte dane z wyniku — 42e1cee
+- [x] 2.4 Testy integracyjne używają fałszywego S3 bez połączenia z AWS — 42e1cee
 
 #### Manual
 
-- [x] 2.5 Zalogowany użytkownik anonimizuje syntetyczny PDF i DOCX do 10 MB
-- [x] 2.6 Skanowany PDF bez warstwy tekstowej ma czytelny błąd bez OCR
+- [x] 2.5 Zalogowany użytkownik anonimizuje syntetyczny PDF i DOCX do 10 MB — 42e1cee
+- [x] 2.6 Skanowany PDF bez warstwy tekstowej ma czytelny błąd bez OCR — 42e1cee
 
 ### Phase 3: Historia dokumentów i bezpieczne pobranie
 
 #### Automated
 
-- [ ] 3.1 Testy API blokują listę i pobranie wyniku przez drugą kancelarię
-- [ ] 3.2 Testy klienta pokrywają multipart z tokenem, limit 10 MB i komunikaty błędów
-- [ ] 3.3 npm run test, npm run lint i npm run build przechodzą bez błędów
+- [x] 3.1 Testy API blokują listę i pobranie wyniku przez drugą kancelarię
+- [x] 3.2 Testy klienta pokrywają multipart z tokenem, limit 10 MB i komunikaty błędów
+- [x] 3.3 npm run test, npm run lint i npm run build przechodzą bez błędów
 
 #### Manual
 
-- [ ] 3.4 Panel pokazuje tylko własne wyniki po odświeżeniu i pobiera wersję zanonimizowaną
-- [ ] 3.5 Druga kancelaria nie widzi ani nie pobiera wyniku pierwszej kancelarii
+- [x] 3.4 Panel pokazuje tylko własne wyniki po odświeżeniu i pobiera wersję zanonimizowaną
+- [x] 3.5 Druga kancelaria nie widzi ani nie pobiera wyniku pierwszej kancelarii
 
 ### Phase 4: Regresje, granice danych i dokumentacja S3
 

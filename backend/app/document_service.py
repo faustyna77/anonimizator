@@ -2,9 +2,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime
 import json
 from typing import Callable
 from uuid import UUID, uuid4
+
+from sqlalchemy.orm import Session
 
 from backend.app import document_repository
 from backend.app.auth import AccessContext
@@ -19,6 +22,7 @@ class DocumentProcessingResult:
     """Safe metadata returned after a document has been anonymized and persisted."""
 
     document_id: UUID
+    original_filename: str
     document_format: str
     size_bytes: int
     status: str
@@ -30,7 +34,7 @@ class DocumentProcessingService:
     def __init__(
         self,
         *,
-        session_factory: Callable[[], object],
+        session_factory: Callable[[], Session],
         storage: DocumentStorage,
         mapping_cipher: DocumentMappingCipher,
     ):
@@ -51,6 +55,7 @@ class DocumentProcessingService:
         access_context: AccessContext,
         *,
         content: bytes,
+        original_filename: str,
         document_format: str,
         content_type: str,
     ) -> DocumentProcessingResult:
@@ -66,6 +71,7 @@ class DocumentProcessingService:
                     session,
                     access_context,
                     document_id=document_id,
+                    original_filename=original_filename,
                     document_format=document_format,
                     size_bytes=len(content),
                     original_object_key=original_key,
@@ -88,6 +94,7 @@ class DocumentProcessingService:
                     raise RuntimeError("Document ownership was unavailable during processing")
             return DocumentProcessingResult(
                 document_id=document_id,
+                original_filename=original_filename,
                 document_format=document_format,
                 size_bytes=len(content),
                 status="ready",
@@ -110,7 +117,7 @@ class DocumentProcessingService:
         raise DocumentProcessingError("The document format is not supported.")
 
     @staticmethod
-    def _mark_failed(session: object, access_context: AccessContext, document_id: UUID, document: object | None) -> None:
+    def _mark_failed(session: Session, access_context: AccessContext, document_id: UUID, document: object | None) -> None:
         if document is None:
             return
         try:
@@ -119,3 +126,66 @@ class DocumentProcessingService:
         except Exception:
             # The original exception remains the only client-visible result.
             return
+
+
+@dataclass(frozen=True)
+class DocumentHistoryEntry:
+    """The intentionally small document history contract safe for an office user."""
+
+    document_id: UUID
+    original_filename: str | None
+    document_format: str
+    size_bytes: int
+    status: str
+    created_at: datetime
+
+
+class DocumentAccessService:
+    """Read office-scoped document history and mint result URLs after ownership checks."""
+
+    def __init__(self, *, session_factory: Callable[[], Session], storage: DocumentStorage):
+        self._session_factory = session_factory
+        self._storage = storage
+
+    @classmethod
+    def from_settings(cls, settings: Settings) -> "DocumentAccessService":
+        return cls(session_factory=get_session_factory(), storage=DocumentStorage(settings))
+
+    def list_documents(self, access_context: AccessContext) -> tuple[DocumentHistoryEntry, ...]:
+        session = self._session_factory()
+        try:
+            with session.begin():
+                return tuple(
+                    DocumentHistoryEntry(
+                        document_id=document.id,
+                        original_filename=document.original_filename,
+                        document_format=document.document_format,
+                        size_bytes=document.size_bytes,
+                        status=document.status,
+                        created_at=document.created_at,
+                    )
+                    for document in document_repository.list_documents_for_access_context(session, access_context)
+                )
+        finally:
+            session.close()
+
+    def create_anonymized_download_url(self, access_context: AccessContext, document_id: UUID) -> str | None:
+        """Presign only a ready result whose stored key matches its server-derived ownership."""
+        session = self._session_factory()
+        try:
+            with session.begin():
+                document = document_repository.get_document_for_access_context(
+                    session, access_context, document_id
+                )
+                if (
+                    document is None
+                    or document.status != "ready"
+                    or document.anonymized_object_key is None
+                ):
+                    return None
+                result_key = self._storage.build_object_key(access_context, document.id, "anonymized")
+                if document.anonymized_object_key != result_key.value:
+                    return None
+                return self._storage.create_result_download_url(result_key)
+        finally:
+            session.close()
