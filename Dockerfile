@@ -4,6 +4,8 @@ COPY backend/requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 COPY backend/ ./backend/
 COPY src/ ./src/
+COPY alembic.ini ./
+COPY alembic/ ./alembic/
 EXPOSE 8000
 ENV PYTHONUNBUFFERED=1
 # bind 0.0.0.0 required — pre-mortem risk #3 (infrastructure.md)

@@ -14,6 +14,7 @@
     fieldset { border: 0; padding: 0; margin: 0; }
     .status { font-size: 12px; margin-top: 10px; min-height: 18px; color: #333; }
     .session { font-size: 12px; margin: 0; }
+    .hint { font-size: 11px; margin: 5px 0 0; color: #555; }
     [hidden] { display: none; }
   </style>
 </head>
@@ -28,6 +29,15 @@
       <label for="password">Hasło</label>
       <input id="password" name="password" type="password" autocomplete="current-password" required>
       <button id="loginButton" type="submit">Zaloguj</button>
+    </fieldset>
+  </form>
+
+  <form id="documentForm" hidden>
+    <fieldset id="documentFields">
+      <label for="documentFile">Dokument do anonimizacji</label>
+      <input id="documentFile" name="documentFile" type="file" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" required>
+      <p class="hint">Tylko PDF lub DOCX, maksymalnie 10 MB.</p>
+      <button id="anonymizeButton" type="submit">Anonimizuj i pobierz</button>
     </fieldset>
   </form>
 

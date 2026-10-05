@@ -202,26 +202,26 @@ Brak migracji bazy i brak zmiany backendowego API. Istniejący prototyp rozszerz
 
 #### Automated
 
-- [x] 1.1 Testy auth sesji oraz manifestu rozszerzenia przechodzą bez usług zewnętrznych
-- [x] 1.2 Test manifestu potwierdza ograniczone permissions i host permissions
-- [x] 1.3 Kontrola składni rozszerzenia i `node --test chrome-extension/tests` przechodzą
+- [x] 1.1 Testy auth sesji oraz manifestu rozszerzenia przechodzą bez usług zewnętrznych — a215940
+- [x] 1.2 Test manifestu potwierdza ograniczone permissions i host permissions — a215940
+- [x] 1.3 Kontrola składni rozszerzenia i `node --test chrome-extension/tests` przechodzą — a215940
 
 #### Manual
 
-- [x] 1.4 Unpacked extension loguje użytkownika bez ekspozycji hasła ani tokenu
-- [x] 1.5 Popup odmawia uruchomienia poza `http://localhost:3000`
+- [x] 1.4 Unpacked extension loguje użytkownika bez ekspozycji hasła ani tokenu — a215940
+- [x] 1.5 Popup odmawia uruchomienia poza `http://localhost:3000` — a215940
 
 ### Phase 2: Upload i pobranie zanonimizowanego wyniku
 
 #### Automated
 
-- [ ] 2.1 Testy rozszerzenia pokrywają multipart Bearer upload, limit i brak office_id
-- [ ] 2.2 Testy rozszerzenia pokrywają bezpieczne pobranie oraz błędy 401/403/422/404
-- [ ] 2.3 Backendowy zestaw S-01 przechodzi na testowej PostgreSQL bez zmiany kontraktu
+- [x] 2.1 Testy rozszerzenia pokrywają multipart Bearer upload, limit i brak office_id
+- [x] 2.2 Testy rozszerzenia pokrywają bezpieczne pobranie oraz błędy 401/403/422/404
+- [x] 2.3 Backendowy zestaw S-01 przechodzi na testowej PostgreSQL bez zmiany kontraktu
 
 #### Manual
 
-- [ ] 2.4 Zalogowany prawnik na localhost:3000 anonimizuje PDF/DOCX i ręcznie załącza wynik
+- [x] 2.4 Zalogowany prawnik na localhost:3000 anonimizuje PDF/DOCX i ręcznie załącza wynik
 - [ ] 2.5 Błędy sesji, typu, limitu i PDF-skanu są czytelne bez ekspozycji danych
 
 ### Phase 3: Regresje, instrukcja pilota i granice wdrożenia
