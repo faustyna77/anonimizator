@@ -215,13 +215,13 @@ Brak migracji bazy i brak zmiany backendowego API. Istniejący prototyp rozszerz
 
 #### Automated
 
-- [x] 2.1 Testy rozszerzenia pokrywają multipart Bearer upload, limit i brak office_id
-- [x] 2.2 Testy rozszerzenia pokrywają bezpieczne pobranie oraz błędy 401/403/422/404
-- [x] 2.3 Backendowy zestaw S-01 przechodzi na testowej PostgreSQL bez zmiany kontraktu
+- [x] 2.1 Testy rozszerzenia pokrywają multipart Bearer upload, limit i brak office_id — 1f81b17
+- [x] 2.2 Testy rozszerzenia pokrywają bezpieczne pobranie oraz błędy 401/403/422/404 — 1f81b17
+- [x] 2.3 Backendowy zestaw S-01 przechodzi na testowej PostgreSQL bez zmiany kontraktu — 1f81b17
 
 #### Manual
 
-- [x] 2.4 Zalogowany prawnik na localhost:3000 anonimizuje PDF/DOCX i ręcznie załącza wynik
+- [x] 2.4 Zalogowany prawnik na localhost:3000 anonimizuje PDF/DOCX i ręcznie załącza wynik — 1f81b17
 - [ ] 2.5 Błędy sesji, typu, limitu i PDF-skanu są czytelne bez ekspozycji danych
 
 ### Phase 3: Regresje, instrukcja pilota i granice wdrożenia
