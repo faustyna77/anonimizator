@@ -1,6 +1,6 @@
 from sqlalchemy import CheckConstraint, ForeignKeyConstraint, Index, UniqueConstraint
 
-from backend.app.models import Document, Office, Profile
+from backend.app.models import Document, Office, OfficeAnonymizationRule, Profile
 
 
 def test_profile_uses_supabase_user_id_and_one_office_relation():
@@ -40,3 +40,21 @@ def test_document_metadata_has_office_owned_storage_fields_and_private_mapping()
         if isinstance(constraint, CheckConstraint) and constraint.name == "ck_documents_status"
     )
     assert "status IN ('processing', 'ready', 'failed')" == str(status_constraint.sqltext)
+
+
+def test_office_rules_are_office_owned_and_allow_a_shared_marker_label():
+    constraint_names = {constraint.name for constraint in OfficeAnonymizationRule.__table__.constraints}
+    indexes = {index.name for index in OfficeAnonymizationRule.__table__.indexes if isinstance(index, Index)}
+    foreign_keys = {
+        constraint.name
+        for constraint in OfficeAnonymizationRule.__table__.constraints
+        if isinstance(constraint, ForeignKeyConstraint)
+    }
+
+    assert "ck_office_rules_kind" in constraint_names
+    assert "uq_office_rules_kind_pattern" in constraint_names
+    assert "fk_office_rules_office" in foreign_keys
+    assert "ix_office_rules_office_enabled" in indexes
+    assert "uq_office_rules_marker_label" not in constraint_names
+    assert OfficeAnonymizationRule.__table__.c.enabled.default.arg is True
+    assert OfficeAnonymizationRule.__table__.c.pattern.type.length == 512

@@ -4,6 +4,7 @@ from datetime import datetime
 from uuid import UUID, uuid4
 
 from sqlalchemy import (
+    Boolean,
     CheckConstraint,
     DateTime,
     ForeignKey,
@@ -36,6 +37,39 @@ class Office(Base):
         back_populates="office",
         overlaps="uploaded_by_profile,uploaded_documents",
     )
+    anonymization_rules: Mapped[list["OfficeAnonymizationRule"]] = relationship(back_populates="office")
+
+
+class OfficeAnonymizationRule(Base):
+    """A phrase or RE2 regex rule scoped to one trusted office."""
+
+    __tablename__ = "office_anonymization_rules"
+    __table_args__ = (
+        CheckConstraint("kind IN ('phrase', 'regex')", name="ck_office_rules_kind"),
+        ForeignKeyConstraint(
+            ["office_id"],
+            ["offices.id"],
+            name="fk_office_rules_office",
+            ondelete="RESTRICT",
+        ),
+        UniqueConstraint("office_id", "kind", "pattern", name="uq_office_rules_kind_pattern"),
+        Index("ix_office_rules_office_enabled", "office_id", "enabled"),
+    )
+
+    id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True, default=uuid4)
+    office_id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), nullable=False)
+    kind: Mapped[str] = mapped_column(String(16), nullable=False)
+    pattern: Mapped[str] = mapped_column(String(512), nullable=False)
+    marker_label: Mapped[str] = mapped_column(String(32), nullable=False)
+    enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
+    )
+
+    office: Mapped[Office] = relationship(back_populates="anonymization_rules")
 
 
 class Profile(Base):
