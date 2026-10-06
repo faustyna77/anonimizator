@@ -187,21 +187,21 @@ Migracja dodaje puste tabele i nie zmienia obecnych dokumentów, ich zaszyfrowan
 
 #### Automated
 
-- [x] 1.1 Migracja i repozytorium izolują reguły oraz limit 50 per kancelaria
-- [x] 1.2 Silnik obsługuje bezpieczne bezkontekstowe frazy, regexy, markery i kolizje
-- [x] 1.3 Testy modelu, repozytorium i anonimizacji przechodzą
+- [x] 1.1 Migracja i repozytorium izolują reguły oraz limit 50 per kancelaria — b8719b4
+- [x] 1.2 Silnik obsługuje bezpieczne bezkontekstowe frazy, regexy, markery i kolizje — b8719b4
+- [x] 1.3 Testy modelu, repozytorium i anonimizacji przechodzą — b8719b4
 
 #### Manual
 
-- [x] 1.4 Nieprawidłowy regex zwraca bezpieczny komunikat
+- [x] 1.4 Nieprawidłowy regex zwraca bezpieczny komunikat — b8719b4
 
 ### Phase 2: Chronione API i snapshot w PDF/DOCX
 
 #### Automated
 
-- [ ] 2.1 Wstrzykiwane API CRUD chroni dane i ukrywa błędne wzorce
-- [ ] 2.2 PDF/DOCX stosują jeden snapshot aktywnych reguł bez błędnej redakcji duplikatów
-- [ ] 2.3 Pełny backendowy zestaw przechodzi po przygotowaniu Python 3.11 i PostgreSQL
+- [x] 2.1 Wstrzykiwane API CRUD chroni dane i ukrywa błędne wzorce
+- [x] 2.2 PDF/DOCX stosują jeden snapshot aktywnych reguł bez błędnej redakcji duplikatów
+- [x] 2.3 Pełny backendowy zestaw przechodzi po przygotowaniu Python 3.11 i PostgreSQL
 
 #### Manual
 

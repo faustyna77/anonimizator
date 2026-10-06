@@ -3,6 +3,7 @@ from io import BytesIO
 import pymupdf
 from docx import Document
 
+from backend.app.anonymization import CustomRegexRule, DocumentAnonymizer, PhraseRule
 from backend.app.document_formats import DocumentProcessingError, anonymize_docx, anonymize_pdf
 
 
@@ -47,6 +48,21 @@ def _docx_text(document: Document) -> str:
     )
 
 
+def test_docx_anonymization_uses_the_injected_office_rule_anonymizer():
+    source = Document()
+    source.add_paragraph("Jan Kowalski i Jan Kowalski")
+    source_bytes = BytesIO()
+    source.save(source_bytes)
+
+    output, mapping = anonymize_docx(
+        source_bytes.getvalue(),
+        DocumentAnonymizer(phrase_rules=(PhraseRule(rule_id="office-rule", phrase="Jan Kowalski", marker_label="KLIENT"),)),
+    )
+
+    assert Document(BytesIO(output)).paragraphs[0].text == "[KLIENT_1] i [KLIENT_1]"
+    assert mapping == {"[KLIENT_1]": "Jan Kowalski"}
+
+
 def test_docx_anonymization_preserves_runs_and_handles_body_table_header_and_footer():
     source = Document()
     body = source.add_paragraph()
@@ -67,7 +83,7 @@ def test_docx_anonymization_preserves_runs_and_handles_body_table_header_and_foo
     source_bytes = BytesIO()
     source.save(source_bytes)
 
-    output, mapping = anonymize_docx(source_bytes.getvalue())
+    output, mapping = anonymize_docx(source_bytes.getvalue(), DocumentAnonymizer())
     transformed = Document(BytesIO(output))
     text = _docx_text(transformed)
     transformed_body = transformed.paragraphs[0]
@@ -86,10 +102,31 @@ def test_docx_anonymization_preserves_runs_and_handles_body_table_header_and_foo
     assert set(mapping) == {"[PESEL_1]", "[NIP_1]", "[EMAIL_1]", "[TELEFON_1]", "[IBAN_1]"}
 
 
+def test_pdf_anonymization_uses_value_only_regex_for_repeated_text():
+    source = _synthetic_pdf(["SPRAWA-2026", "prefix SPRAWA-2026 suffix"])
+    anonymizer = DocumentAnonymizer(
+        regex_rules=(
+            CustomRegexRule(rule_id="office-rule", pattern=r"SPRAWA-\d{4}", marker_label="NUMER_SPRAWY"),
+        )
+    )
+
+    output, mapping = anonymize_pdf(source, anonymizer)
+    document = pymupdf.open(stream=output, filetype="pdf")
+    try:
+        text = document[0].get_text("text")
+    finally:
+        document.close()
+
+    assert text.count("[NUMER_SPRAWY_1]") == 2
+    assert "prefix" in text and "suffix" in text
+    assert "SPRAWA-2026" not in text
+    assert mapping == {"[NUMER_SPRAWY_1]": "SPRAWA-2026"}
+
+
 def test_pdf_anonymization_redacts_in_place_and_preserves_pages_layout_and_static_content():
     source = _synthetic_pdf(list(SOURCE_IDENTIFIERS))
 
-    output, mapping = anonymize_pdf(source)
+    output, mapping = anonymize_pdf(source, DocumentAnonymizer())
 
     document = pymupdf.open(stream=output, filetype="pdf")
     text = "\n".join(page.get_text("text") for page in document)
@@ -117,7 +154,7 @@ def test_pdf_without_text_layer_returns_a_controlled_ocr_error():
     source = _synthetic_pdf([], include_static_text=False)
 
     try:
-        anonymize_pdf(source)
+        anonymize_pdf(source, DocumentAnonymizer())
     except DocumentProcessingError as error:
         assert str(error) == "PDF text layer is unavailable; OCR is not supported in this MVP."
     else:

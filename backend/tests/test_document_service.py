@@ -8,6 +8,7 @@ from docx import Document
 from backend.app import document_service
 from backend.app.auth import AccessContext
 from backend.app.config import Settings
+from backend.app.anonymization import DocumentAnonymizer, PhraseRule
 from backend.app.document_service import DocumentProcessingError, DocumentProcessingService
 from backend.app.storage import DocumentMappingCipher, DocumentStorage
 
@@ -18,6 +19,16 @@ class FakeS3Client:
 
     def put_object(self, **kwargs):
         self.objects[kwargs["Key"]] = kwargs["Body"]
+
+
+class FakeRuleSnapshotService:
+    def __init__(self, anonymizer):
+        self.anonymizer = anonymizer
+        self.calls = []
+
+    def create_active_anonymizer(self, access_context):
+        self.calls.append(access_context)
+        return self.anonymizer
 
 
 class FakeSession:
@@ -61,6 +72,89 @@ def _docx_bytes(text: str) -> bytes:
     return output.getvalue()
 
 
+def test_service_ignores_a_disabled_rule_absent_from_the_active_snapshot(monkeypatch):
+    fake_s3 = FakeS3Client()
+    settings = _settings()
+    created = []
+
+    def create_processing(session, context, **kwargs):
+        document = SimpleNamespace(id=kwargs["document_id"], status="processing", **kwargs)
+        created.append(document)
+        return document
+
+    def mark_ready(session, context, document_id, **kwargs):
+        document = created[0]
+        document.status = "ready"
+        document.encrypted_mapping = kwargs["encrypted_mapping"]
+        return document
+
+    monkeypatch.setattr(document_service.document_repository, "create_processing_document", create_processing)
+    monkeypatch.setattr(document_service.document_repository, "mark_document_ready", mark_ready)
+    snapshot_service = FakeRuleSnapshotService(DocumentAnonymizer())
+    service = DocumentProcessingService(
+        session_factory=FakeSession,
+        storage=DocumentStorage(settings, client=fake_s3),
+        mapping_cipher=DocumentMappingCipher.from_settings(settings),
+        office_rule_service=snapshot_service,
+    )
+
+    result = service.process_upload(
+        _context(),
+        content=_docx_bytes("Jan Kowalski"),
+        original_filename="synthetic.docx",
+        document_format="docx",
+        content_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    )
+
+    result_key = f"offices/{_context().office_id}/documents/{result.document_id}/anonymized"
+    assert Document(BytesIO(fake_s3.objects[result_key])).paragraphs[0].text == "Jan Kowalski"
+    assert json.loads(DocumentMappingCipher.from_settings(settings).decrypt(created[0].encrypted_mapping)) == {}
+
+
+def test_service_loads_one_active_rule_snapshot_before_transforming_a_document(monkeypatch):
+    fake_s3 = FakeS3Client()
+    settings = _settings()
+    created = []
+
+    def create_processing(session, context, **kwargs):
+        document = SimpleNamespace(id=kwargs["document_id"], status="processing", **kwargs)
+        created.append(document)
+        return document
+
+    def mark_ready(session, context, document_id, **kwargs):
+        document = created[0]
+        document.status = "ready"
+        document.encrypted_mapping = kwargs["encrypted_mapping"]
+        return document
+
+    monkeypatch.setattr(document_service.document_repository, "create_processing_document", create_processing)
+    monkeypatch.setattr(document_service.document_repository, "mark_document_ready", mark_ready)
+    snapshot_service = FakeRuleSnapshotService(
+        DocumentAnonymizer(phrase_rules=(PhraseRule(rule_id="office-rule", phrase="Jan Kowalski", marker_label="KLIENT"),))
+    )
+    service = DocumentProcessingService(
+        session_factory=FakeSession,
+        storage=DocumentStorage(settings, client=fake_s3),
+        mapping_cipher=DocumentMappingCipher.from_settings(settings),
+        office_rule_service=snapshot_service,
+    )
+
+    result = service.process_upload(
+        _context(),
+        content=_docx_bytes("Jan Kowalski / Jan Kowalski"),
+        original_filename="synthetic.docx",
+        document_format="docx",
+        content_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    )
+
+    assert snapshot_service.calls == [_context()]
+    result_key = f"offices/{_context().office_id}/documents/{result.document_id}/anonymized"
+    assert Document(BytesIO(fake_s3.objects[result_key])).paragraphs[0].text == "[KLIENT_1] / [KLIENT_1]"
+    assert json.loads(DocumentMappingCipher.from_settings(settings).decrypt(created[0].encrypted_mapping)) == {
+        "[KLIENT_1]": "Jan Kowalski"
+    }
+
+
 def test_service_persists_synthetic_original_result_and_encrypted_mapping_with_fake_s3(monkeypatch):
     fake_s3 = FakeS3Client()
     settings = _settings()
@@ -84,6 +178,7 @@ def test_service_persists_synthetic_original_result_and_encrypted_mapping_with_f
         session_factory=FakeSession,
         storage=DocumentStorage(settings, client=fake_s3),
         mapping_cipher=DocumentMappingCipher.from_settings(settings),
+        office_rule_service=FakeRuleSnapshotService(DocumentAnonymizer()),
     )
 
     result = service.process_upload(
@@ -127,6 +222,7 @@ def test_service_marks_document_failed_after_a_controlled_format_error(monkeypat
         session_factory=FakeSession,
         storage=DocumentStorage(settings, client=fake_s3),
         mapping_cipher=DocumentMappingCipher.from_settings(settings),
+        office_rule_service=FakeRuleSnapshotService(DocumentAnonymizer()),
     )
 
     try:

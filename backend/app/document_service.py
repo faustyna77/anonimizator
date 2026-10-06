@@ -10,11 +10,13 @@ from uuid import UUID, uuid4
 from sqlalchemy.orm import Session
 
 from backend.app import document_repository
+from backend.app.anonymization import DocumentAnonymizer
 from backend.app.auth import AccessContext
 from backend.app.config import Settings
 from backend.app.database import get_session_factory
 from backend.app.document_formats import DocumentProcessingError, anonymize_docx, anonymize_pdf
 from backend.app.storage import DocumentMappingCipher, DocumentStorage
+from backend.app.office_rule_service import OfficeRuleService, OfficeRuleSnapshotProvider
 
 
 @dataclass(frozen=True)
@@ -37,10 +39,12 @@ class DocumentProcessingService:
         session_factory: Callable[[], Session],
         storage: DocumentStorage,
         mapping_cipher: DocumentMappingCipher,
+        office_rule_service: OfficeRuleSnapshotProvider,
     ):
         self._session_factory = session_factory
         self._storage = storage
         self._mapping_cipher = mapping_cipher
+        self._office_rule_service = office_rule_service
 
     @classmethod
     def from_settings(cls, settings: Settings) -> "DocumentProcessingService":
@@ -48,6 +52,7 @@ class DocumentProcessingService:
             session_factory=get_session_factory(),
             storage=DocumentStorage(settings),
             mapping_cipher=DocumentMappingCipher.from_settings(settings),
+            office_rule_service=OfficeRuleService.from_settings(settings),
         )
 
     def process_upload(
@@ -77,7 +82,8 @@ class DocumentProcessingService:
                     original_object_key=original_key,
                 )
             self._storage.put_object(original_key, content, content_type)
-            transformed_content, mapping = self._anonymize(document_format, content)
+            anonymizer = self._office_rule_service.create_active_anonymizer(access_context)
+            transformed_content, mapping = self._anonymize(document_format, content, anonymizer)
             self._storage.put_object(anonymized_key, transformed_content, content_type)
             encrypted_mapping = self._mapping_cipher.encrypt(
                 json.dumps(mapping, sort_keys=True, separators=(",", ":")).encode("utf-8")
@@ -109,11 +115,13 @@ class DocumentProcessingService:
             session.close()
 
     @staticmethod
-    def _anonymize(document_format: str, content: bytes) -> tuple[bytes, dict[str, str]]:
+    def _anonymize(
+        document_format: str, content: bytes, anonymizer: DocumentAnonymizer
+    ) -> tuple[bytes, dict[str, str]]:
         if document_format == "pdf":
-            return anonymize_pdf(content)
+            return anonymize_pdf(content, anonymizer)
         if document_format == "docx":
-            return anonymize_docx(content)
+            return anonymize_docx(content, anonymizer)
         raise DocumentProcessingError("The document format is not supported.")
 
     @staticmethod

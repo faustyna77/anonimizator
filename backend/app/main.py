@@ -17,6 +17,13 @@ from backend.app.document_service import (
     DocumentProcessingService,
 )
 from backend.app.document_upload import UploadValidationError, parse_uploaded_document
+from backend.app.office_rule_service import (
+    OfficeRule,
+    OfficeRulePayloadError,
+    OfficeRuleProcessor,
+    OfficeRuleService,
+    parse_office_rule_payload,
+)
 
 
 class DocumentProcessor(Protocol):
@@ -60,10 +67,29 @@ class AnonymizedDownloadResponse(BaseModel):
     download_url: str
 
 
+class OfficeRuleResponse(BaseModel):
+    rule_id: str
+    kind: str
+    pattern: str
+    marker_label: str
+    enabled: bool
+
+
+def _office_rule_response(rule: OfficeRule) -> OfficeRuleResponse:
+    return OfficeRuleResponse(
+        rule_id=str(rule.rule_id),
+        kind=rule.kind,
+        pattern=rule.pattern,
+        marker_label=rule.marker_label,
+        enabled=rule.enabled,
+    )
+
+
 def create_app(
     settings: Optional[Settings] = None,
     document_service: Optional[DocumentProcessor] = None,
     document_access_service: Optional[DocumentAccessProcessor] = None,
+    office_rule_service: Optional[OfficeRuleProcessor] = None,
 ) -> FastAPI:
     """Build the API with public health checks and protected product routes."""
     resolved_settings = settings if settings is not None else get_settings()
@@ -77,13 +103,57 @@ def create_app(
         CORSMiddleware,
         allow_origins=resolved_settings.allowed_origins,
         allow_credentials=True,
-        allow_methods=["GET", "POST", "OPTIONS"],
+        allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
         allow_headers=["Authorization", "Content-Type"],
     )
 
     @app.get("/health")
     def health():
         return {"status": "ok"}
+
+    @app.get("/office-rules", response_model=list[OfficeRuleResponse])
+    def list_office_rules(
+        access_context: AccessContext = Depends(get_current_access_context),
+    ) -> list[OfficeRuleResponse]:
+        processor = office_rule_service or OfficeRuleService.from_settings(resolved_settings)
+        return [_office_rule_response(rule) for rule in processor.list_rules(access_context)]
+
+    @app.post("/office-rules", response_model=OfficeRuleResponse, status_code=status.HTTP_201_CREATED)
+    async def create_office_rule(
+        request: Request,
+        access_context: AccessContext = Depends(get_current_access_context),
+    ) -> OfficeRuleResponse:
+        try:
+            rule = parse_office_rule_payload(await request.json())
+        except (OfficeRulePayloadError, ValueError):
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="The rule payload is invalid.")
+        processor = office_rule_service or OfficeRuleService.from_settings(resolved_settings)
+        return _office_rule_response(processor.create_rule(access_context, rule))
+
+    @app.patch("/office-rules/{rule_id}", response_model=OfficeRuleResponse)
+    async def update_office_rule(
+        rule_id: UUID,
+        request: Request,
+        access_context: AccessContext = Depends(get_current_access_context),
+    ) -> OfficeRuleResponse:
+        try:
+            rule = parse_office_rule_payload(await request.json())
+        except (OfficeRulePayloadError, ValueError):
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="The rule payload is invalid.")
+        processor = office_rule_service or OfficeRuleService.from_settings(resolved_settings)
+        updated = processor.update_rule(access_context, rule_id, rule)
+        if updated is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Office rule was not found.")
+        return _office_rule_response(updated)
+
+    @app.delete("/office-rules/{rule_id}", status_code=status.HTTP_204_NO_CONTENT)
+    def delete_office_rule(
+        rule_id: UUID,
+        access_context: AccessContext = Depends(get_current_access_context),
+    ) -> None:
+        processor = office_rule_service or OfficeRuleService.from_settings(resolved_settings)
+        if not processor.delete_rule(access_context, rule_id):
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Office rule was not found.")
 
     @app.post("/anonymize", response_model=AnonymizedDocumentResponse)
     async def anonymize(

@@ -20,14 +20,13 @@ class UnsupportedDocumentError(DocumentProcessingError):
     """The uploaded bytes cannot be processed as the declared document format."""
 
 
-def anonymize_docx(content: bytes) -> tuple[bytes, dict[str, str]]:
+def anonymize_docx(content: bytes, anonymizer: DocumentAnonymizer) -> tuple[bytes, dict[str, str]]:
     """Replace identifiers in DOCX body, table, header, and footer paragraphs."""
     try:
         document = Document(BytesIO(content))
     except Exception as error:
         raise UnsupportedDocumentError("The DOCX file could not be processed.") from error
 
-    anonymizer = DocumentAnonymizer()
     for paragraph in _document_paragraphs(document):
         _anonymize_docx_paragraph(paragraph, anonymizer)
 
@@ -112,7 +111,7 @@ def _cell_paragraphs(cell: _Cell) -> Iterable[Any]:
     yield from _table_paragraphs(cell.tables)
 
 
-def anonymize_pdf(content: bytes) -> tuple[bytes, dict[str, str]]:
+def anonymize_pdf(content: bytes, anonymizer: DocumentAnonymizer) -> tuple[bytes, dict[str, str]]:
     """Redact identifiers in-place while retaining the source PDF's pages and layout."""
     try:
         document = pymupdf.open(stream=content, filetype="pdf")
@@ -123,7 +122,6 @@ def anonymize_pdf(content: bytes) -> tuple[bytes, dict[str, str]]:
         if document.page_count == 0 or not any(page.get_text("text").strip() for page in document):
             raise DocumentProcessingError("PDF text layer is unavailable; OCR is not supported in this MVP.")
 
-        anonymizer = DocumentAnonymizer()
         for page in document:
             _redact_pdf_page(page, anonymizer)
 

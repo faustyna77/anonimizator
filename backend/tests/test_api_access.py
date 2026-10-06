@@ -44,6 +44,51 @@ class FailingDocumentService:
         raise DocumentProcessingError("PDF text layer is unavailable; OCR is not supported in this MVP.")
 
 
+class FakeOfficeRuleService:
+    def __init__(self):
+        self.calls = []
+        self.rule = type(
+            "Rule",
+            (),
+            {
+                "rule_id": UUID("00000000-0000-0000-0000-000000000006"),
+                "kind": "phrase",
+                "pattern": "Jan Kowalski",
+                "marker_label": "KLIENT",
+                "enabled": True,
+            },
+        )()
+
+    def list_rules(self, access_context):
+        self.calls.append(("list", access_context))
+        return (self.rule,)
+
+    def create_rule(self, access_context, rule):
+        self.calls.append(("create", access_context, rule))
+        self.rule = type(
+            "Rule",
+            (),
+            {
+                "rule_id": self.rule.rule_id,
+                "kind": rule.kind,
+                "pattern": rule.pattern,
+                "marker_label": rule.marker_label,
+                "enabled": rule.enabled,
+            },
+        )()
+        return self.rule
+
+    def update_rule(self, access_context, rule_id, rule):
+        self.calls.append(("update", access_context, rule_id, rule))
+        if rule_id != self.rule.rule_id:
+            return None
+        return self.create_rule(access_context, rule)
+
+    def delete_rule(self, access_context, rule_id):
+        self.calls.append(("delete", access_context, rule_id))
+        return rule_id == self.rule.rule_id
+
+
 class FakeDocumentAccessService:
     def __init__(self, entries_by_office, download_urls):
         self.entries_by_office = entries_by_office
@@ -61,12 +106,16 @@ class FakeDocumentAccessService:
 
 
 def build_client(
-    settings: Optional[Settings] = None, document_service=None, document_access_service=None
+    settings: Optional[Settings] = None,
+    document_service=None,
+    document_access_service=None,
+    office_rule_service=None,
 ) -> tuple[TestClient, FastAPI]:
     app = create_app(
         settings or Settings(panel_allowed_origins="http://panel.test"),
         document_service=document_service,
         document_access_service=document_access_service,
+        office_rule_service=office_rule_service,
     )
     return TestClient(app), app
 
@@ -92,6 +141,170 @@ def test_health_is_public_and_anonymize_requires_a_token():
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
     assert response.json() == {"detail": "Invalid or missing access token"}
     assert response.headers["www-authenticate"] == "Bearer"
+
+
+def test_office_rules_requires_a_token():
+    client, _ = build_client(document_service=FakeDocumentService())
+
+    response = client.get("/office-rules")
+
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+    assert response.json() == {"detail": "Invalid or missing access token"}
+    assert response.headers["www-authenticate"] == "Bearer"
+
+
+def test_list_office_rules_uses_the_injected_service_and_never_returns_office_id():
+    service = FakeOfficeRuleService()
+    client, app = build_client(document_service=FakeDocumentService(), office_rule_service=service)
+    context = _context()
+    app.dependency_overrides[get_current_access_context] = lambda: context
+
+    response = client.get("/office-rules", headers={"Authorization": "Bearer controlled-token"})
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == [
+        {
+            "rule_id": "00000000-0000-0000-0000-000000000006",
+            "kind": "phrase",
+            "pattern": "Jan Kowalski",
+            "marker_label": "KLIENT",
+            "enabled": True,
+        }
+    ]
+    assert "office_id" not in response.text
+    assert service.calls == [("list", context)]
+
+
+def test_create_office_rule_uses_server_derived_context_and_public_payload_only():
+    service = FakeOfficeRuleService()
+    client, app = build_client(document_service=FakeDocumentService(), office_rule_service=service)
+    context = _context()
+    app.dependency_overrides[get_current_access_context] = lambda: context
+
+    response = client.post(
+        "/office-rules",
+        headers={"Authorization": "Bearer controlled-token"},
+        json={"kind": "regex", "pattern": r"SPRAWA-\d{4}", "marker_label": "NUMER_SPRAWY", "enabled": True},
+    )
+
+    assert response.status_code == status.HTTP_201_CREATED
+    assert response.json() == {
+        "rule_id": "00000000-0000-0000-0000-000000000006",
+        "kind": "regex",
+        "pattern": r"SPRAWA-\d{4}",
+        "marker_label": "NUMER_SPRAWY",
+        "enabled": True,
+    }
+    assert "office_id" not in response.text
+    assert service.calls[0][0:2] == ("create", context)
+    assert service.calls[0][2].kind == "regex"
+    assert service.calls[0][2].pattern == r"SPRAWA-\d{4}"
+
+
+def test_update_office_rule_returns_the_updated_rule_from_the_injected_service():
+    service = FakeOfficeRuleService()
+    client, app = build_client(document_service=FakeDocumentService(), office_rule_service=service)
+    context = _context()
+    app.dependency_overrides[get_current_access_context] = lambda: context
+
+    response = client.patch(
+        "/office-rules/00000000-0000-0000-0000-000000000006",
+        headers={"Authorization": "Bearer controlled-token"},
+        json={"kind": "phrase", "pattern": "Anna Nowak", "marker_label": "KLIENT", "enabled": False},
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == {
+        "rule_id": "00000000-0000-0000-0000-000000000006",
+        "kind": "phrase",
+        "pattern": "Anna Nowak",
+        "marker_label": "KLIENT",
+        "enabled": False,
+    }
+    assert service.calls[0][0:3] == ("update", context, UUID("00000000-0000-0000-0000-000000000006"))
+
+
+def test_delete_office_rule_and_patch_delete_preflight_are_supported():
+    service = FakeOfficeRuleService()
+    client, app = build_client(document_service=FakeDocumentService(), office_rule_service=service)
+    context = _context()
+    app.dependency_overrides[get_current_access_context] = lambda: context
+    rule_path = "/office-rules/00000000-0000-0000-0000-000000000006"
+
+    deleted = client.delete(rule_path, headers={"Authorization": "Bearer controlled-token"})
+    patch_preflight = client.options(
+        rule_path,
+        headers={"Origin": "http://panel.test", "Access-Control-Request-Method": "PATCH"},
+    )
+    delete_preflight = client.options(
+        rule_path,
+        headers={"Origin": "http://panel.test", "Access-Control-Request-Method": "DELETE"},
+    )
+
+    assert deleted.status_code == status.HTTP_204_NO_CONTENT
+    assert service.calls[0] == ("delete", context, UUID("00000000-0000-0000-0000-000000000006"))
+    assert patch_preflight.status_code == status.HTTP_200_OK
+    assert delete_preflight.status_code == status.HTTP_200_OK
+    assert "PATCH" in patch_preflight.headers["access-control-allow-methods"]
+    assert "DELETE" in delete_preflight.headers["access-control-allow-methods"]
+
+
+def test_invalid_rule_payload_returns_safe_422_without_echoing_the_pattern_or_validation_context():
+    service = FakeOfficeRuleService()
+    client, app = build_client(document_service=FakeDocumentService(), office_rule_service=service)
+    app.dependency_overrides[get_current_access_context] = _context
+    submitted_pattern = "super-secret-pattern("
+
+    invalid_regex = client.post(
+        "/office-rules",
+        headers={"Authorization": "Bearer controlled-token"},
+        json={
+            "kind": "regex",
+            "pattern": submitted_pattern,
+            "marker_label": "NUMER_SPRAWY",
+            "enabled": True,
+        },
+    )
+    client_selected_office = client.post(
+        "/office-rules",
+        headers={"Authorization": "Bearer controlled-token"},
+        json={
+            "kind": "phrase",
+            "pattern": "Jan Kowalski",
+            "marker_label": "KLIENT",
+            "enabled": True,
+            "office_id": "attacker-controlled-office",
+        },
+    )
+
+    for response in (invalid_regex, client_selected_office):
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+        assert response.json() == {"detail": "The rule payload is invalid."}
+        assert "input" not in response.text
+        assert "ctx" not in response.text
+    assert submitted_pattern not in invalid_regex.text
+    assert service.calls == []
+
+
+def test_foreign_and_missing_office_rules_return_the_same_404():
+    service = FakeOfficeRuleService()
+    client, app = build_client(document_service=FakeDocumentService(), office_rule_service=service)
+    app.dependency_overrides[get_current_access_context] = _context
+    payload = {"kind": "phrase", "pattern": "Anna Nowak", "marker_label": "KLIENT", "enabled": True}
+
+    foreign = client.patch(
+        "/office-rules/00000000-0000-0000-0000-000000000007",
+        headers={"Authorization": "Bearer controlled-token"},
+        json=payload,
+    )
+    missing = client.patch(
+        "/office-rules/00000000-0000-0000-0000-000000000008",
+        headers={"Authorization": "Bearer controlled-token"},
+        json=payload,
+    )
+
+    assert foreign.status_code == missing.status_code == status.HTTP_404_NOT_FOUND
+    assert foreign.json() == missing.json() == {"detail": "Office rule was not found."}
 
 
 def test_anonymize_returns_403_when_the_verified_user_has_no_office_context():
