@@ -48,6 +48,12 @@ export function createProductApi({ baseUrl, getAccessToken, fetchImpl = fetch })
     }
 
     if (response.status === 422) {
+      if (path.startsWith('/office-rules')) {
+        throw new ApiAccessError(
+          'RULE_SAVE_FAILED',
+          'Nie udało się zapisać reguły. Sprawdź dane i spróbuj ponownie.',
+        );
+      }
       throw new ApiAccessError(
         'PROCESSING_FAILED',
         'Nie udało się przetworzyć dokumentu. Sprawdź plik i spróbuj ponownie.',
@@ -55,6 +61,9 @@ export function createProductApi({ baseUrl, getAccessToken, fetchImpl = fetch })
     }
 
     if (response.status === 404) {
+      if (path.startsWith('/office-rules')) {
+        throw new ApiAccessError('RULE_NOT_FOUND', 'Reguła nie jest dostępna.');
+      }
       throw new ApiAccessError('RESULT_UNAVAILABLE', 'Wynik anonimizacji nie jest dostępny.');
     }
 
@@ -62,7 +71,20 @@ export function createProductApi({ baseUrl, getAccessToken, fetchImpl = fetch })
       throw new ApiAccessError('REQUEST_FAILED', 'Nie udało się wykonać żądania. Spróbuj ponownie.');
     }
 
+    if (response.status === 204) {
+      return undefined;
+    }
+
     return response.json();
+  }
+
+  function rulePayload(rule) {
+    return {
+      kind: rule.kind,
+      pattern: rule.pattern,
+      marker_label: rule.marker_label,
+      enabled: rule.enabled,
+    };
   }
 
   return {
@@ -82,6 +104,26 @@ export function createProductApi({ baseUrl, getAccessToken, fetchImpl = fetch })
       return request(`/documents/${encodeURIComponent(documentId)}/anonymized-download`, {
         method: 'GET',
       });
+    },
+    listOfficeRules() {
+      return request('/office-rules', { method: 'GET' });
+    },
+    createOfficeRule(rule) {
+      return request('/office-rules', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(rulePayload(rule)),
+      });
+    },
+    updateOfficeRule(ruleId, rule) {
+      return request(`/office-rules/${encodeURIComponent(ruleId)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(rulePayload(rule)),
+      });
+    },
+    deleteOfficeRule(ruleId) {
+      return request(`/office-rules/${encodeURIComponent(ruleId)}`, { method: 'DELETE' });
     },
   };
 }

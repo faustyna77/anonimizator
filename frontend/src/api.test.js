@@ -108,4 +108,111 @@ describe('panel access contracts', () => {
       message: 'Nie udało się przetworzyć dokumentu. Sprawdź plik i spróbuj ponownie.',
     });
   });
+
+  it('uses bearer-authenticated CRUD requests for office rules without office_id', async () => {
+    const fetchImpl = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => [],
+    });
+    const api = createProductApi({
+      baseUrl: 'https://api.example.test',
+      getAccessToken: async () => 'session-token',
+      fetchImpl,
+    });
+    const rule = {
+      kind: 'phrase',
+      pattern: 'Jan Kowalski',
+      marker_label: 'KLIENT',
+      enabled: true,
+      office_id: 'must-not-be-sent',
+    };
+
+    await api.listOfficeRules();
+    await api.createOfficeRule(rule);
+    await api.updateOfficeRule('rule/id', rule);
+    await api.deleteOfficeRule('rule/id');
+
+    expect(fetchImpl.mock.calls).toEqual([
+      ['https://api.example.test/office-rules', {
+        headers: { Authorization: 'Bearer session-token' },
+        method: 'GET',
+      }],
+      ['https://api.example.test/office-rules', {
+        body: JSON.stringify({
+          kind: 'phrase',
+          pattern: 'Jan Kowalski',
+          marker_label: 'KLIENT',
+          enabled: true,
+        }),
+        headers: {
+          Authorization: 'Bearer session-token',
+          'Content-Type': 'application/json',
+        },
+        method: 'POST',
+      }],
+      ['https://api.example.test/office-rules/rule%2Fid', {
+        body: JSON.stringify({
+          kind: 'phrase',
+          pattern: 'Jan Kowalski',
+          marker_label: 'KLIENT',
+          enabled: true,
+        }),
+        headers: {
+          Authorization: 'Bearer session-token',
+          'Content-Type': 'application/json',
+        },
+        method: 'PATCH',
+      }],
+      ['https://api.example.test/office-rules/rule%2Fid', {
+        headers: { Authorization: 'Bearer session-token' },
+        method: 'DELETE',
+      }],
+    ]);
+  });
+
+  it('accepts an empty successful response when deleting a rule', async () => {
+    const api = createProductApi({
+      baseUrl: 'https://api.example.test',
+      getAccessToken: async () => 'session-token',
+      fetchImpl: vi.fn().mockResolvedValue({ ok: true, status: 204 }),
+    });
+
+    await expect(api.deleteOfficeRule('rule-id')).resolves.toBeUndefined();
+  });
+
+  it('maps a rule validation failure to a clear save error without the raw pattern', async () => {
+    const api = createProductApi({
+      baseUrl: 'https://api.example.test',
+      getAccessToken: async () => 'session-token',
+      fetchImpl: vi.fn().mockResolvedValue({
+        ok: false,
+        status: 422,
+        json: async () => ({ detail: 'Invalid pattern: (secret-regex)' }),
+      }),
+    });
+
+    await expect(api.createOfficeRule({
+      kind: 'regex',
+      pattern: '(secret-regex)',
+      marker_label: 'KLIENT',
+      enabled: true,
+    })).rejects.toEqual(new ApiAccessError(
+      'RULE_SAVE_FAILED',
+      'Nie udało się zapisać reguły. Sprawdź dane i spróbuj ponownie.',
+    ));
+  });
+
+  it('maps an unavailable rule to a safe not-found error', async () => {
+    const api = createProductApi({
+      baseUrl: 'https://api.example.test',
+      getAccessToken: async () => 'session-token',
+      fetchImpl: vi.fn().mockResolvedValue({ ok: false, status: 404 }),
+    });
+
+    await expect(api.deleteOfficeRule('missing-rule')).rejects.toEqual(new ApiAccessError(
+      'RULE_NOT_FOUND',
+      'Reguła nie jest dostępna.',
+    ));
+  });
 });

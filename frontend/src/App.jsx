@@ -11,6 +11,16 @@ import {
 import './App.css';
 
 const API_BASE = import.meta.env.VITE_API_BASE || 'https://anonimizator.fly.dev';
+const RULE_KINDS = ['phrase', 'regex'];
+
+function createRuleDraft(kind) {
+  return {
+    kind,
+    pattern: '',
+    marker_label: '',
+    enabled: true,
+  };
+}
 
 function App() {
   const [authClient, setAuthClient] = useState(null);
@@ -22,6 +32,15 @@ function App() {
   const [authMessage, setAuthMessage] = useState('');
   const [selectedFile, setSelectedFile] = useState(null);
   const [documents, setDocuments] = useState([]);
+  const [officeRules, setOfficeRules] = useState([]);
+  const [ruleDrafts, setRuleDrafts] = useState({
+    phrase: createRuleDraft('phrase'),
+    regex: createRuleDraft('regex'),
+  });
+  const [editingRule, setEditingRule] = useState(null);
+  const [ruleMessage, setRuleMessage] = useState(null);
+  const [savingRuleKind, setSavingRuleKind] = useState(null);
+  const [deletingRuleId, setDeletingRuleId] = useState(null);
   const [documentMessage, setDocumentMessage] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const [downloadingDocumentId, setDownloadingDocumentId] = useState(null);
@@ -74,6 +93,7 @@ function App() {
     event.preventDefault();
     setAuthMessage('');
     setDocumentMessage('');
+    setRuleMessage(null);
     setIsSubmitting(true);
 
     try {
@@ -99,12 +119,15 @@ function App() {
   async function handleSignOut() {
     setAuthMessage('');
     setDocumentMessage('');
+    setRuleMessage(null);
 
     try {
       await signOut(authClient);
       setSession(null);
       setMode('sign-in');
       setDocuments([]);
+      setOfficeRules([]);
+      setEditingRule(null);
       setSelectedFile(null);
     } catch (error) {
       setAuthMessage(error.message || 'Nie udało się wylogować użytkownika.');
@@ -128,6 +151,8 @@ function App() {
       setSession(null);
       setMode('sign-in');
       setDocuments([]);
+      setOfficeRules([]);
+      setEditingRule(null);
     }
     return error.message || fallbackMessage;
   }
@@ -140,12 +165,112 @@ function App() {
     }
   }
 
+  async function loadOfficeRules() {
+    try {
+      setOfficeRules(await productApi().listOfficeRules());
+    } catch (error) {
+      setRuleMessage({
+        text: await handleProductError(error, 'Nie udało się pobrać reguł kancelarii.'),
+        role: 'alert',
+      });
+    }
+  }
+
+  function updateRuleDraft(kind, field, value) {
+    setRuleDrafts((currentDrafts) => ({
+      ...currentDrafts,
+      [kind]: {
+        ...currentDrafts[kind],
+        [field]: value,
+      },
+    }));
+  }
+
+  function resetRuleDraft(kind) {
+    setRuleDrafts((currentDrafts) => ({
+      ...currentDrafts,
+      [kind]: createRuleDraft(kind),
+    }));
+    if (editingRule?.kind === kind) {
+      setEditingRule(null);
+    }
+  }
+
+  function handleEditRule(rule) {
+    setRuleDrafts((currentDrafts) => ({
+      ...currentDrafts,
+      [rule.kind]: {
+        kind: rule.kind,
+        pattern: rule.pattern,
+        marker_label: rule.marker_label,
+        enabled: rule.enabled,
+      },
+    }));
+    setEditingRule({ id: rule.rule_id, kind: rule.kind });
+    setRuleMessage(null);
+  }
+
+  async function handleRuleSave(event, kind) {
+    event.preventDefault();
+    const draft = ruleDrafts[kind];
+    const editingRuleId = editingRule?.kind === kind ? editingRule.id : null;
+    setRuleMessage(null);
+    setSavingRuleKind(kind);
+
+    try {
+      if (editingRuleId) {
+        await productApi().updateOfficeRule(editingRuleId, draft);
+      } else {
+        await productApi().createOfficeRule(draft);
+      }
+      resetRuleDraft(kind);
+      setRuleMessage({
+        text: editingRuleId ? 'Reguła została zaktualizowana.' : 'Reguła została dodana.',
+        role: 'status',
+      });
+      await loadOfficeRules();
+    } catch (error) {
+      setRuleMessage({
+        text: await handleProductError(error, 'Nie udało się zapisać reguły.'),
+        role: 'alert',
+      });
+    } finally {
+      setSavingRuleKind(null);
+    }
+  }
+
+  async function handleRuleDelete(rule) {
+    if (!window.confirm(`Czy na pewno usunąć regułę „${rule.pattern}”?`)) {
+      return;
+    }
+
+    setRuleMessage(null);
+    setDeletingRuleId(rule.rule_id);
+    try {
+      await productApi().deleteOfficeRule(rule.rule_id);
+      if (editingRule?.id === rule.rule_id) {
+        resetRuleDraft(rule.kind);
+      }
+      setRuleMessage({ text: 'Reguła została usunięta.', role: 'status' });
+      await loadOfficeRules();
+    } catch (error) {
+      setRuleMessage({
+        text: await handleProductError(error, 'Nie udało się usunąć reguły.'),
+        role: 'alert',
+      });
+    } finally {
+      setDeletingRuleId(null);
+    }
+  }
+
   useEffect(() => {
     if (!session) {
       setDocuments([]);
+      setOfficeRules([]);
       return undefined;
     }
     void loadDocuments();
+    void loadOfficeRules();
     return undefined;
   }, [session]);
 
@@ -231,6 +356,103 @@ function App() {
             </button>
           </form>
           {documentMessage && <p role="status">{documentMessage}</p>}
+        </section>
+
+        <section className="panel__card" aria-labelledby="office-rules-title">
+          <h2 id="office-rules-title">Reguły anonimizacji</h2>
+          <p>Dodawaj osobno dosłowne frazy i wyrażenia regularne dla kolejnych dokumentów.</p>
+          {ruleMessage && <p role={ruleMessage.role}>{ruleMessage.text}</p>}
+
+          <div className="panel__rule-sections">
+            {RULE_KINDS.map((kind) => {
+              const isPhrase = kind === 'phrase';
+              const isEditing = editingRule?.kind === kind;
+              const rules = officeRules.filter((rule) => rule.kind === kind);
+              const draft = ruleDrafts[kind];
+              const isSaving = savingRuleKind === kind;
+
+              return (
+                <section className="panel__rule-section" key={kind} aria-labelledby={`${kind}-rules-title`}>
+                  <h3 id={`${kind}-rules-title`}>{isPhrase ? 'Frazy' : 'Regexy'}</h3>
+                  <p>{isPhrase
+                    ? 'Fraza zostanie wyszukana niezależnie od wielkości liter.'
+                    : 'Regex powinien opisywać wartość, którą chcesz ukryć.'}
+                  </p>
+                  <form className="panel__rule-form" onSubmit={(event) => handleRuleSave(event, kind)}>
+                    <label htmlFor={`${kind}-pattern`}>{isPhrase ? 'Fraza' : 'Wyrażenie regularne'}</label>
+                    <input
+                      id={`${kind}-pattern`}
+                      type="text"
+                      value={draft.pattern}
+                      onChange={(event) => updateRuleDraft(kind, 'pattern', event.target.value)}
+                      maxLength={isPhrase ? 255 : 512}
+                      required
+                    />
+
+                    <label htmlFor={`${kind}-marker-label`}>Etykieta markera</label>
+                    <input
+                      id={`${kind}-marker-label`}
+                      type="text"
+                      value={draft.marker_label}
+                      onChange={(event) => updateRuleDraft(kind, 'marker_label', event.target.value)}
+                      maxLength="32"
+                      pattern="[A-Z][A-Z0-9_]*"
+                      title="Użyj wielkich liter, cyfr i podkreślników; etykieta musi zaczynać się od litery."
+                      required
+                    />
+
+                    <label className="panel__checkbox" htmlFor={`${kind}-enabled`}>
+                      <input
+                        id={`${kind}-enabled`}
+                        type="checkbox"
+                        checked={draft.enabled}
+                        onChange={(event) => updateRuleDraft(kind, 'enabled', event.target.checked)}
+                      />
+                      Reguła aktywna
+                    </label>
+
+                    <div className="panel__rule-actions">
+                      <button type="submit" disabled={isSaving}>
+                        {isSaving ? 'Zapisywanie…' : isEditing ? 'Zapisz zmiany' : 'Dodaj regułę'}
+                      </button>
+                      {isEditing && (
+                        <button type="button" onClick={() => resetRuleDraft(kind)} disabled={isSaving}>
+                          Anuluj edycję
+                        </button>
+                      )}
+                    </div>
+                  </form>
+
+                  {rules.length === 0 ? (
+                    <p>Nie dodano jeszcze reguł tego typu.</p>
+                  ) : (
+                    <ul className="panel__rule-list">
+                      {rules.map((rule) => (
+                        <li key={rule.rule_id}>
+                          <div>
+                            <strong>{rule.pattern}</strong>
+                            <p>Marker: {rule.marker_label} · {rule.enabled ? 'Aktywna' : 'Wyłączona'}</p>
+                          </div>
+                          <div className="panel__rule-actions">
+                            <button type="button" onClick={() => handleEditRule(rule)}>
+                              Edytuj
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleRuleDelete(rule)}
+                              disabled={deletingRuleId === rule.rule_id}
+                            >
+                              {deletingRuleId === rule.rule_id ? 'Usuwanie…' : 'Usuń'}
+                            </button>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </section>
+              );
+            })}
+          </div>
         </section>
 
         <section className="panel__card" aria-labelledby="document-history-title">

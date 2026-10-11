@@ -199,9 +199,9 @@ Migracja dodaje puste tabele i nie zmienia obecnych dokumentów, ich zaszyfrowan
 
 #### Automated
 
-- [x] 2.1 Wstrzykiwane API CRUD chroni dane i ukrywa błędne wzorce
-- [x] 2.2 PDF/DOCX stosują jeden snapshot aktywnych reguł bez błędnej redakcji duplikatów
-- [x] 2.3 Pełny backendowy zestaw przechodzi po przygotowaniu Python 3.11 i PostgreSQL
+- [x] 2.1 Wstrzykiwane API CRUD chroni dane i ukrywa błędne wzorce — 830423a
+- [x] 2.2 PDF/DOCX stosują jeden snapshot aktywnych reguł bez błędnej redakcji duplikatów — 830423a
+- [x] 2.3 Pełny backendowy zestaw przechodzi po przygotowaniu Python 3.11 i PostgreSQL — 830423a
 
 #### Manual
 
@@ -211,8 +211,8 @@ Migracja dodaje puste tabele i nie zmienia obecnych dokumentów, ich zaszyfrowan
 
 #### Automated
 
-- [ ] 3.1 Klient frontendowy obsługuje bezpieczny CRUD reguł
-- [ ] 3.2 Testy i bramki frontendowe przechodzą
+- [x] 3.1 Klient frontendowy obsługuje bezpieczny CRUD reguł
+- [x] 3.2 Testy i bramki frontendowe przechodzą
 
 #### Manual
 
