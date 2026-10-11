@@ -14,6 +14,7 @@ from backend.app.office_rule_repository import (
     list_office_rules_for_access_context,
     update_office_rule,
 )
+from backend.app.office_rule_service import OfficeRuleService
 
 
 @pytest.mark.postgresql
@@ -108,6 +109,26 @@ def test_office_rule_repository_enforces_active_rule_limit(migrated_session_fact
                 marker_label="KLIENT",
             )
 
+
+@pytest.mark.postgresql
+def test_active_rule_snapshot_remains_usable_after_its_session_closes(migrated_session_factory):
+    with migrated_session_factory.begin() as session:
+        office = Office(name="Snapshot office")
+        profile = Profile(user_id="snapshot-user", office=office)
+        session.add(profile)
+        session.flush()
+        access_context = AccessContext("snapshot-user", profile.id, office.id)
+        create_office_rule(
+            session,
+            access_context,
+            kind="phrase",
+            pattern="Jan Kowalski",
+            marker_label="KLIENT",
+        )
+
+    anonymizer = OfficeRuleService(session_factory=migrated_session_factory).create_active_anonymizer(access_context)
+
+    assert anonymizer.anonymize("Jan Kowalski").text == "[KLIENT_1]"
 
 
 @pytest.mark.postgresql

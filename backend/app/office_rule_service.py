@@ -153,7 +153,8 @@ class OfficeRuleService:
         try:
             with session.begin():
                 active_rules = tuple(
-                    office_rule_repository.list_enabled_office_rules_for_access_context(session, access_context)
+                    _to_office_rule(rule)
+                    for rule in office_rule_repository.list_enabled_office_rules_for_access_context(session, access_context)
                 )
         finally:
             session.close()
@@ -163,11 +164,11 @@ class OfficeRuleService:
         for rule in active_rules:
             if rule.kind == "phrase":
                 phrase_rules.append(
-                    PhraseRule(rule_id=str(rule.id), phrase=rule.pattern, marker_label=rule.marker_label)
+                    PhraseRule(rule_id=str(rule.rule_id), phrase=rule.pattern, marker_label=rule.marker_label)
                 )
             elif rule.kind == "regex":
                 regex_rules.append(
-                    CustomRegexRule(rule_id=str(rule.id), pattern=rule.pattern, marker_label=rule.marker_label)
+                    CustomRegexRule(rule_id=str(rule.rule_id), pattern=rule.pattern, marker_label=rule.marker_label)
                 )
             else:
                 raise RuleValidationError("A stored rule is invalid.")
