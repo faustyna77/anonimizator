@@ -11,10 +11,11 @@ jobs:
       - uses: actions/checkout@v4
       - uses: superfly/flyctl-actions/setup-flyctl@master
       - run: >-
-          flyctl deploy --app anonimizator-panel --config frontend/fly.toml --remote-only
+          flyctl deploy --app anonimizator-panel --config fly.toml --remote-only
           --build-arg VITE_SUPABASE_URL="$VITE_SUPABASE_URL"
           --build-arg VITE_SUPABASE_ANON_KEY="$VITE_SUPABASE_ANON_KEY"
           --build-arg VITE_API_BASE="$VITE_API_BASE"
+        working-directory: frontend
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
           VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
