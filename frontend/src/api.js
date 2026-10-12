@@ -9,6 +9,10 @@ export class ApiAccessError extends Error {
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
 const ALLOWED_EXTENSIONS = new Set(['pdf', 'docx']);
 
+function requestFailedError() {
+  return new ApiAccessError('REQUEST_FAILED', 'Nie udało się wykonać żądania. Spróbuj ponownie.');
+}
+
 export function validateDocumentUpload(file) {
   const extension = file?.name?.split('.').pop()?.toLowerCase();
   if (!file || !ALLOWED_EXTENSIONS.has(extension)) {
@@ -21,19 +25,29 @@ export function validateDocumentUpload(file) {
 
 export function createProductApi({ baseUrl, getAccessToken, fetchImpl = fetch }) {
   async function request(path, options = {}) {
-    const accessToken = await getAccessToken();
+    let accessToken;
+    try {
+      accessToken = await getAccessToken();
+    } catch {
+      throw requestFailedError();
+    }
 
     if (!accessToken) {
       throw new ApiAccessError('SESSION_REQUIRED', 'Zaloguj się ponownie, aby uzyskać dostęp do panelu.');
     }
 
-    const response = await fetchImpl(`${baseUrl}${path}`, {
-      ...options,
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        ...options.headers,
-      },
-    });
+    let response;
+    try {
+      response = await fetchImpl(`${baseUrl}${path}`, {
+        ...options,
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          ...options.headers,
+        },
+      });
+    } catch {
+      throw requestFailedError();
+    }
 
     if (response.status === 401) {
       throw new ApiAccessError('UNAUTHORIZED', 'Sesja wygasła. Zaloguj się ponownie.');
@@ -68,14 +82,18 @@ export function createProductApi({ baseUrl, getAccessToken, fetchImpl = fetch })
     }
 
     if (!response.ok) {
-      throw new ApiAccessError('REQUEST_FAILED', 'Nie udało się wykonać żądania. Spróbuj ponownie.');
+      throw requestFailedError();
     }
 
     if (response.status === 204) {
       return undefined;
     }
 
-    return response.json();
+    try {
+      return await response.json();
+    } catch {
+      throw requestFailedError();
+    }
   }
 
   function rulePayload(rule) {

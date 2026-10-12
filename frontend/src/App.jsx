@@ -1,6 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { ApiAccessError, createProductApi, validateDocumentUpload } from './api.js';
+import { createRequestGeneration } from './request-generation.js';
+import { createRuleDraft, createRuleDrafts, resetRuleDrafts } from './rule-drafts.js';
 import {
   createSupabaseAuthClient,
   restoreSession,
@@ -13,18 +15,12 @@ import './App.css';
 const API_BASE = import.meta.env.VITE_API_BASE || 'https://anonimizator.fly.dev';
 const RULE_KINDS = ['phrase', 'regex'];
 
-function createRuleDraft(kind) {
-  return {
-    kind,
-    pattern: '',
-    marker_label: '',
-    enabled: true,
-  };
-}
-
 function App() {
   const [authClient, setAuthClient] = useState(null);
   const [session, setSession] = useState(null);
+  const sessionTokenRef = useRef(null);
+  const sessionIdentityRef = useRef(null);
+  const requestGenerationRef = useRef(createRequestGeneration());
   const [isRestoringSession, setIsRestoringSession] = useState(true);
   const [mode, setMode] = useState('sign-in');
   const [email, setEmail] = useState('');
@@ -33,10 +29,7 @@ function App() {
   const [selectedFile, setSelectedFile] = useState(null);
   const [documents, setDocuments] = useState([]);
   const [officeRules, setOfficeRules] = useState([]);
-  const [ruleDrafts, setRuleDrafts] = useState({
-    phrase: createRuleDraft('phrase'),
-    regex: createRuleDraft('regex'),
-  });
+  const [ruleDrafts, setRuleDrafts] = useState(createRuleDrafts);
   const [editingRule, setEditingRule] = useState(null);
   const [ruleMessage, setRuleMessage] = useState(null);
   const [savingRuleKind, setSavingRuleKind] = useState(null);
@@ -45,6 +38,42 @@ function App() {
   const [isUploading, setIsUploading] = useState(false);
   const [downloadingDocumentId, setDownloadingDocumentId] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  function invalidateRequests() {
+    requestGenerationRef.current.advance();
+  }
+
+  function isCurrentRequest(generation) {
+    return requestGenerationRef.current.isCurrent(generation);
+  }
+
+  function clearOfficeScopedUiState() {
+    setDocuments([]);
+    setOfficeRules([]);
+    setRuleDrafts(resetRuleDrafts());
+    setEditingRule(null);
+    setRuleMessage(null);
+    setDocumentMessage('');
+    setSelectedFile(null);
+    setSavingRuleKind(null);
+    setDeletingRuleId(null);
+    setIsUploading(false);
+    setDownloadingDocumentId(null);
+  }
+
+  function setActiveSession(nextSession) {
+    const nextToken = nextSession?.access_token ?? null;
+    if (sessionTokenRef.current !== nextToken) {
+      sessionTokenRef.current = nextToken;
+      invalidateRequests();
+    }
+    const nextIdentity = nextSession?.user?.id ?? null;
+    if (sessionIdentityRef.current !== nextIdentity) {
+      sessionIdentityRef.current = nextIdentity;
+      clearOfficeScopedUiState();
+    }
+    setSession(nextSession);
+  }
 
   useEffect(() => {
     let active = true;
@@ -57,7 +86,7 @@ function App() {
       restoreSession(client)
         .then((restoredSession) => {
           if (active) {
-            setSession(restoredSession);
+            setActiveSession(restoredSession);
           }
         })
         .catch(() => {
@@ -73,7 +102,7 @@ function App() {
 
       ({ data: { subscription } } = client.auth.onAuthStateChange((_event, nextSession) => {
         if (active) {
-          setSession(nextSession);
+          setActiveSession(nextSession);
         }
       }));
     } catch (error) {
@@ -103,7 +132,7 @@ function App() {
         : await signInWithPassword(authClient, credentials);
 
       if (nextSession) {
-        setSession(nextSession);
+        setActiveSession(nextSession);
         return;
       }
 
@@ -118,19 +147,14 @@ function App() {
 
   async function handleSignOut() {
     setAuthMessage('');
-    setDocumentMessage('');
-    setRuleMessage(null);
+    invalidateRequests();
+    setActiveSession(null);
+    setMode('sign-in');
 
     try {
       await signOut(authClient);
-      setSession(null);
-      setMode('sign-in');
-      setDocuments([]);
-      setOfficeRules([]);
-      setEditingRule(null);
-      setSelectedFile(null);
     } catch (error) {
-      setAuthMessage(error.message || 'Nie udało się wylogować użytkownika.');
+      setAuthMessage(error.message || 'Nie udało się wylogować na serwerze. Dane zostały usunięte z tego urządzenia.');
     }
   }
 
@@ -141,38 +165,54 @@ function App() {
     });
   }
 
-  async function handleProductError(error, fallbackMessage) {
+  async function handleProductError(error, fallbackMessage, generation) {
+    if (!isCurrentRequest(generation)) {
+      return null;
+    }
     if (error instanceof ApiAccessError && error.code === 'UNAUTHORIZED') {
+      invalidateRequests();
       try {
         await signOut(authClient);
       } catch {
         // The expired token is never reused even if remote sign-out cannot complete.
       }
-      setSession(null);
+      setActiveSession(null);
       setMode('sign-in');
-      setDocuments([]);
-      setOfficeRules([]);
-      setEditingRule(null);
     }
     return error.message || fallbackMessage;
   }
 
-  async function loadDocuments() {
+  async function loadDocuments(generation = requestGenerationRef.current.capture()) {
     try {
-      setDocuments(await productApi().listDocuments());
+      const nextDocuments = await productApi().listDocuments();
+      if (isCurrentRequest(generation)) {
+        setDocuments(nextDocuments);
+      }
     } catch (error) {
-      setDocumentMessage(await handleProductError(error, 'Nie udało się pobrać historii dokumentów.'));
+      if (!isCurrentRequest(generation)) {
+        return;
+      }
+      const message = await handleProductError(error, 'Nie udało się pobrać historii dokumentów.', generation);
+      if (message && isCurrentRequest(generation)) {
+        setDocumentMessage(message);
+      }
     }
   }
 
-  async function loadOfficeRules() {
+  async function loadOfficeRules(generation = requestGenerationRef.current.capture()) {
     try {
-      setOfficeRules(await productApi().listOfficeRules());
+      const nextOfficeRules = await productApi().listOfficeRules();
+      if (isCurrentRequest(generation)) {
+        setOfficeRules(nextOfficeRules);
+      }
     } catch (error) {
-      setRuleMessage({
-        text: await handleProductError(error, 'Nie udało się pobrać reguł kancelarii.'),
-        role: 'alert',
-      });
+      if (!isCurrentRequest(generation)) {
+        return;
+      }
+      const message = await handleProductError(error, 'Nie udało się pobrać reguł kancelarii.', generation);
+      if (message && isCurrentRequest(generation)) {
+        setRuleMessage({ text: message, role: 'alert' });
+      }
     }
   }
 
@@ -212,6 +252,7 @@ function App() {
 
   async function handleRuleSave(event, kind) {
     event.preventDefault();
+    const generation = requestGenerationRef.current.capture();
     const draft = ruleDrafts[kind];
     const editingRuleId = editingRule?.kind === kind ? editingRule.id : null;
     setRuleMessage(null);
@@ -223,19 +264,27 @@ function App() {
       } else {
         await productApi().createOfficeRule(draft);
       }
+      if (!isCurrentRequest(generation)) {
+        return;
+      }
       resetRuleDraft(kind);
       setRuleMessage({
         text: editingRuleId ? 'Reguła została zaktualizowana.' : 'Reguła została dodana.',
         role: 'status',
       });
-      await loadOfficeRules();
+      await loadOfficeRules(generation);
     } catch (error) {
-      setRuleMessage({
-        text: await handleProductError(error, 'Nie udało się zapisać reguły.'),
-        role: 'alert',
-      });
+      if (!isCurrentRequest(generation)) {
+        return;
+      }
+      const message = await handleProductError(error, 'Nie udało się zapisać reguły.', generation);
+      if (message && isCurrentRequest(generation)) {
+        setRuleMessage({ text: message, role: 'alert' });
+      }
     } finally {
-      setSavingRuleKind(null);
+      if (isCurrentRequest(generation)) {
+        setSavingRuleKind(null);
+      }
     }
   }
 
@@ -244,33 +293,43 @@ function App() {
       return;
     }
 
+    const generation = requestGenerationRef.current.capture();
     setRuleMessage(null);
     setDeletingRuleId(rule.rule_id);
     try {
       await productApi().deleteOfficeRule(rule.rule_id);
+      if (!isCurrentRequest(generation)) {
+        return;
+      }
       if (editingRule?.id === rule.rule_id) {
         resetRuleDraft(rule.kind);
       }
       setRuleMessage({ text: 'Reguła została usunięta.', role: 'status' });
-      await loadOfficeRules();
+      await loadOfficeRules(generation);
     } catch (error) {
-      setRuleMessage({
-        text: await handleProductError(error, 'Nie udało się usunąć reguły.'),
-        role: 'alert',
-      });
+      if (!isCurrentRequest(generation)) {
+        return;
+      }
+      const message = await handleProductError(error, 'Nie udało się usunąć reguły.', generation);
+      if (message && isCurrentRequest(generation)) {
+        setRuleMessage({ text: message, role: 'alert' });
+      }
     } finally {
-      setDeletingRuleId(null);
+      if (isCurrentRequest(generation)) {
+        setDeletingRuleId(null);
+      }
     }
   }
 
   useEffect(() => {
+    const generation = requestGenerationRef.current.capture();
     if (!session) {
       setDocuments([]);
       setOfficeRules([]);
       return undefined;
     }
-    void loadDocuments();
-    void loadOfficeRules();
+    void loadDocuments(generation);
+    void loadOfficeRules(generation);
     return undefined;
   }, [session]);
 
@@ -293,6 +352,7 @@ function App() {
 
   async function handleUpload(event) {
     event.preventDefault();
+    const generation = requestGenerationRef.current.capture();
     setDocumentMessage('');
     if (!selectedFile) {
       setDocumentMessage('Wybierz jeden plik PDF lub DOCX.');
@@ -301,26 +361,48 @@ function App() {
     setIsUploading(true);
     try {
       await productApi().uploadDocument(selectedFile);
+      if (!isCurrentRequest(generation)) {
+        return;
+      }
       setSelectedFile(null);
       setDocumentMessage('Dokument został zanonimizowany i jest gotowy do pobrania.');
-      await loadDocuments();
+      await loadDocuments(generation);
     } catch (error) {
-      setDocumentMessage(await handleProductError(error, 'Nie udało się przesłać dokumentu.'));
+      if (!isCurrentRequest(generation)) {
+        return;
+      }
+      const message = await handleProductError(error, 'Nie udało się przesłać dokumentu.', generation);
+      if (message && isCurrentRequest(generation)) {
+        setDocumentMessage(message);
+      }
     } finally {
-      setIsUploading(false);
+      if (isCurrentRequest(generation)) {
+        setIsUploading(false);
+      }
     }
   }
 
   async function handleDownload(documentId) {
+    const generation = requestGenerationRef.current.capture();
     setDocumentMessage('');
     setDownloadingDocumentId(documentId);
     try {
       const { download_url: downloadUrl } = await productApi().getAnonymizedDownload(documentId);
-      window.location.assign(downloadUrl);
+      if (isCurrentRequest(generation)) {
+        window.location.assign(downloadUrl);
+      }
     } catch (error) {
-      setDocumentMessage(await handleProductError(error, 'Nie udało się pobrać wyniku anonimizacji.'));
+      if (!isCurrentRequest(generation)) {
+        return;
+      }
+      const message = await handleProductError(error, 'Nie udało się pobrać wyniku anonimizacji.', generation);
+      if (message && isCurrentRequest(generation)) {
+        setDocumentMessage(message);
+      }
     } finally {
-      setDownloadingDocumentId(null);
+      if (isCurrentRequest(generation)) {
+        setDownloadingDocumentId(null);
+      }
     }
   }
 

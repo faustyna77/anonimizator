@@ -215,4 +215,65 @@ describe('panel access contracts', () => {
       'Reguła nie jest dostępna.',
     ));
   });
+
+  it('maps a list-rules server failure to a generic safe error', async () => {
+    const api = createProductApi({
+      baseUrl: 'https://api.example.test',
+      getAccessToken: async () => 'session-token',
+      fetchImpl: vi.fn().mockResolvedValue({ ok: false, status: 500 }),
+    });
+
+    await expect(api.listOfficeRules()).rejects.toEqual(new ApiAccessError(
+      'REQUEST_FAILED',
+      'Nie udało się wykonać żądania. Spróbuj ponownie.',
+    ));
+  });
+
+  it('maps an update-rules validation failure to a safe rule-save error', async () => {
+    const api = createProductApi({
+      baseUrl: 'https://api.example.test',
+      getAccessToken: async () => 'session-token',
+      fetchImpl: vi.fn().mockResolvedValue({ ok: false, status: 422 }),
+    });
+
+    await expect(api.updateOfficeRule('rule-id', {
+      kind: 'regex',
+      pattern: 'niepoprawny regex',
+      marker_label: 'KLIENT',
+      enabled: true,
+    })).rejects.toEqual(new ApiAccessError(
+      'RULE_SAVE_FAILED',
+      'Nie udało się zapisać reguły. Sprawdź dane i spróbuj ponownie.',
+    ));
+  });
+
+  it('maps a rejected rule request to a generic safe error', async () => {
+    const api = createProductApi({
+      baseUrl: 'https://api.example.test',
+      getAccessToken: async () => 'session-token',
+      fetchImpl: vi.fn().mockRejectedValue(new Error('network details must not reach the UI')),
+    });
+
+    await expect(api.listOfficeRules()).rejects.toEqual(new ApiAccessError(
+      'REQUEST_FAILED',
+      'Nie udało się wykonać żądania. Spróbuj ponownie.',
+    ));
+  });
+
+  it('maps malformed successful JSON from a rule request to a generic safe error', async () => {
+    const api = createProductApi({
+      baseUrl: 'https://api.example.test',
+      getAccessToken: async () => 'session-token',
+      fetchImpl: vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => { throw new SyntaxError('unexpected response body'); },
+      }),
+    });
+
+    await expect(api.listOfficeRules()).rejects.toEqual(new ApiAccessError(
+      'REQUEST_FAILED',
+      'Nie udało się wykonać żądania. Spróbuj ponownie.',
+    ));
+  });
 });

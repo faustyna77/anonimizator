@@ -1,9 +1,9 @@
 ---
 change_id: office-rules-management
 title: Zarządzanie regułami anonimizacji kancelarii
-status: implementing
+status: impl_reviewed
 created: 2026-10-06
-updated: 2026-10-06
+updated: 2026-10-12
 archived_at: null
 ---
 
