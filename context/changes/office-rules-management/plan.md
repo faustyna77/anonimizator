@@ -205,7 +205,7 @@ Migracja dodaje puste tabele i nie zmienia obecnych dokumentów, ich zaszyfrowan
 
 #### Manual
 
-- [ ] 2.4 Zmiana panelu wpływa na upload rozszerzenia bez jego przeładowania
+- [x] 2.4 Zmiana panelu wpływa na upload rozszerzenia bez jego przeładowania
 
 ### Phase 3: Panel reguł kancelarii
 
@@ -216,4 +216,4 @@ Migracja dodaje puste tabele i nie zmienia obecnych dokumentów, ich zaszyfrowan
 
 #### Manual
 
-- [ ] 3.3 Panel zarządza regułami, a upload stosuje wynik
+- [x] 3.3 Panel zarządza regułami, a upload stosuje wynik

@@ -5,8 +5,8 @@
 - **Scope**: Phase 3 of 3
 - **Reviewed phases**: 3
 - **Date**: 2026-10-12
-- **Verdict**: REJECTED
-- **Findings**: 2 critical, 2 warnings, 1 observation
+- **Verdict**: ACCEPTED AFTER FIXES
+- **Findings**: 2 critical, 2 warnings, 1 observation — all resolved
 
 ## Verdicts
 
@@ -75,10 +75,10 @@
 - **Impact**: 🔎 MEDIUM — wymaga świadomej decyzji o pozostałym ryzyku
 - **Dimension**: Success Criteria
 - **Location**: `context/changes/office-rules-management/plan.md:208,219`
-- **Detail**: `2.4` (reguła panelu działa z rozszerzeniem bez przeładowania) i `3.3` (pełny CRUD panelu oraz wynik kolejnego uploadu) nadal mają status `[ ]`. Automatyczne bramki frontendu przechodzą: 14 testów, lint z trzema ostrzeżeniami React oraz build.
+- **Detail**: `2.4` zostało potwierdzone ręcznie: aktywna reguła utworzona w produkcyjnym panelu zadziałała w rozszerzeniu bez jego przeładowania. `3.3` zostało potwierdzone ręcznie: panel zapisał i przełączył regex, a kolejne uploady stosowały aktualny zestaw reguł.
 - **Fix**: Wykonać scenariusze na lokalnym lub testowym środowisku z drugą kancelarią, a dopiero potem odhaczyć Progress.
   - Strength: Zamienia założenia integracyjne w obserwowalny dowód.
   - Tradeoff: Wymaga bezpiecznej sesji testowej i ręcznego czasu.
-  - Confidence: HIGH — oba punkty nadal są oczekujące w kanonicznym Progress.
+  - Confidence: HIGH — oba ręczne scenariusze są odhaczone w kanonicznym Progress.
   - Blind spot: Nie zweryfikowano realnej integracji rozszerzenia w tym review.
-- **Decision**: PENDING
+- **Decision**: FIXED — 2.4 i 3.3 potwierdzone ręcznie.
