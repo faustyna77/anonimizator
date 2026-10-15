@@ -1,12 +1,13 @@
 from datetime import datetime, timezone
+import json
 from types import SimpleNamespace
 from uuid import UUID
 
 from backend.app import document_service
 from backend.app.auth import AccessContext
 from backend.app.config import Settings
-from backend.app.document_service import DocumentAccessService
-from backend.app.storage import DocumentStorage
+from backend.app.document_service import DocumentAccessService, ResponseDeanonymizationService
+from backend.app.storage import DocumentMappingCipher, DocumentStorage
 
 
 class FakeS3Client:
@@ -144,3 +145,84 @@ def test_document_access_service_does_not_presign_non_ready_documents(monkeypatc
 
     assert service.create_anonymized_download_url(context, document.id) is None
     assert fake_s3.presign_calls == []
+
+
+def test_response_deanonymization_replaces_only_known_markers_for_the_selected_document(monkeypatch):
+    context = _context("00000000-0000-0000-0000-000000000002")
+    document = _document(
+        "00000000-0000-0000-0000-000000000003", str(context.office_id)
+    )
+    cipher = DocumentMappingCipher.from_settings(_settings())
+    document.encrypted_mapping = cipher.encrypt(
+        json.dumps({"[KLIENT_1]": "Jan Kowalski"}, sort_keys=True).encode("utf-8")
+    )
+    monkeypatch.setattr(
+        document_service.document_repository,
+        "get_document_for_access_context",
+        lambda _session, requested_context, document_id: (
+            document if requested_context == context and document_id == document.id else None
+        ),
+    )
+    service = ResponseDeanonymizationService(session_factory=FakeSession, mapping_cipher=cipher)
+
+    result = service.deanonymize_response(
+        context,
+        document.id,
+        "Odpowiedź dla [KLIENT_1] oraz [NIEZNANY_1].",
+    )
+
+    assert result == "Odpowiedź dla Jan Kowalski oraz [NIEZNANY_1]."
+
+
+def test_response_deanonymization_rejects_a_mapping_with_non_marker_keys(monkeypatch):
+    context = _context("00000000-0000-0000-0000-000000000002")
+    document = _document(
+        "00000000-0000-0000-0000-000000000003", str(context.office_id)
+    )
+    cipher = DocumentMappingCipher.from_settings(_settings())
+    document.encrypted_mapping = cipher.encrypt(
+        json.dumps({"not-a-marker": "Jan Kowalski"}, sort_keys=True).encode("utf-8")
+    )
+    monkeypatch.setattr(
+        document_service.document_repository,
+        "get_document_for_access_context",
+        lambda _session, _requested_context, _document_id: document,
+    )
+    service = ResponseDeanonymizationService(session_factory=FakeSession, mapping_cipher=cipher)
+
+    assert service.deanonymize_response(context, document.id, "not-a-marker") is None
+
+
+def test_response_deanonymization_returns_none_for_all_unavailable_mapping_states(monkeypatch):
+    context = _context("00000000-0000-0000-0000-000000000002")
+    other_context = _context("00000000-0000-0000-0000-000000000004")
+    document = _document(
+        "00000000-0000-0000-0000-000000000003", str(context.office_id)
+    )
+    cipher = DocumentMappingCipher.from_settings(_settings())
+    valid_mapping = cipher.encrypt(json.dumps({"[KLIENT_1]": "Jan Kowalski"}).encode("utf-8"))
+    monkeypatch.setattr(
+        document_service.document_repository,
+        "get_document_for_access_context",
+        lambda _session, requested_context, document_id: (
+            document if requested_context == context and document_id == document.id else None
+        ),
+    )
+    service = ResponseDeanonymizationService(session_factory=FakeSession, mapping_cipher=cipher)
+
+    document.status = "processing"
+    document.encrypted_mapping = valid_mapping
+    assert service.deanonymize_response(context, document.id, "[KLIENT_1]") is None
+
+    document.status = "ready"
+    for encrypted_mapping in (
+        None,
+        b"not-a-fernet-token",
+        cipher.encrypt(b"\xff"),
+        cipher.encrypt(b"[]"),
+    ):
+        document.encrypted_mapping = encrypted_mapping
+        assert service.deanonymize_response(context, document.id, "[KLIENT_1]") is None
+
+    document.encrypted_mapping = valid_mapping
+    assert service.deanonymize_response(other_context, document.id, "[KLIENT_1]") is None

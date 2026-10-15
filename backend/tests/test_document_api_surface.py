@@ -5,7 +5,7 @@ from backend.app.config import Settings
 from backend.app.main import create_app
 
 
-def test_document_api_exposes_only_history_and_anonymized_result_download():
+def test_document_api_exposes_history_download_and_deanonymization_without_private_mapping():
     app = create_app(Settings(app_environment="test", panel_allowed_origins="http://panel.test"))
 
     document_paths = {route.path for route in app.routes if route.path.startswith("/documents")}
@@ -14,6 +14,7 @@ def test_document_api_exposes_only_history_and_anonymized_result_download():
     assert document_paths == {
         "/documents",
         "/documents/{document_id}/anonymized-download",
+        "/documents/{document_id}/deanonymize-response",
     }
     assert "original_object_key" not in schema
     assert "anonymized_object_key" not in schema

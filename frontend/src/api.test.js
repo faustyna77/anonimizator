@@ -109,6 +109,91 @@ describe('panel access contracts', () => {
     });
   });
 
+  it('sends one deanonymization request with only response_text and a bearer token', async () => {
+    const fetchImpl = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ response_text: 'Odpowiedź dla Jan Kowalski.' }),
+    });
+    const api = createProductApi({
+      baseUrl: 'https://api.example.test',
+      getAccessToken: async () => 'session-token',
+      fetchImpl,
+    });
+
+    await expect(api.deanonymizeResponse('document/id', 'Odpowiedź dla [KLIENT_1].')).resolves.toEqual({
+      response_text: 'Odpowiedź dla Jan Kowalski.',
+    });
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'https://api.example.test/documents/document%2Fid/deanonymize-response',
+      {
+        body: JSON.stringify({ response_text: 'Odpowiedź dla [KLIENT_1].' }),
+        headers: {
+          Authorization: 'Bearer session-token',
+          'Content-Type': 'application/json',
+        },
+        method: 'POST',
+      },
+    );
+  });
+
+  it('rejects an overlong deanonymization response before making a request', async () => {
+    const fetchImpl = vi.fn();
+    const api = createProductApi({
+      baseUrl: 'https://api.example.test',
+      getAccessToken: async () => 'session-token',
+      fetchImpl,
+    });
+
+    await expect(api.deanonymizeResponse('document-id', 'x'.repeat(50_001))).rejects.toEqual(
+      new ApiAccessError('RESPONSE_TEXT_TOO_LONG', 'Tekst odpowiedzi nie może przekraczać 50 000 znaków.'),
+    );
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it('maps deanonymization validation failures to safe text guidance', async () => {
+    const api = createProductApi({
+      baseUrl: 'https://api.example.test',
+      getAccessToken: async () => 'session-token',
+      fetchImpl: vi.fn().mockResolvedValue({ ok: false, status: 422 }),
+    });
+
+    await expect(api.deanonymizeResponse('document-id', 'Odpowiedź.')).rejects.toEqual(
+      new ApiAccessError('RESPONSE_TEXT_INVALID', 'Tekst odpowiedzi jest nieprawidłowy. Spróbuj ponownie.'),
+    );
+  });
+
+  it('maps deanonymization unavailable, network, and malformed-response failures to safe errors', async () => {
+    const cases = [
+      {
+        fetchImpl: vi.fn().mockResolvedValue({ ok: false, status: 404 }),
+        expected: new ApiAccessError('RESULT_UNAVAILABLE', 'Wynik anonimizacji nie jest dostępny.'),
+      },
+      {
+        fetchImpl: vi.fn().mockRejectedValue(new Error('network details must not reach the UI')),
+        expected: new ApiAccessError('REQUEST_FAILED', 'Nie udało się wykonać żądania. Spróbuj ponownie.'),
+      },
+      {
+        fetchImpl: vi.fn().mockResolvedValue({
+          ok: true,
+          status: 200,
+          json: async () => { throw new SyntaxError('unexpected response body'); },
+        }),
+        expected: new ApiAccessError('REQUEST_FAILED', 'Nie udało się wykonać żądania. Spróbuj ponownie.'),
+      },
+    ];
+
+    for (const { fetchImpl, expected } of cases) {
+      const api = createProductApi({
+        baseUrl: 'https://api.example.test',
+        getAccessToken: async () => 'session-token',
+        fetchImpl,
+      });
+
+      await expect(api.deanonymizeResponse('document-id', 'Odpowiedź.')).rejects.toEqual(expected);
+    }
+  });
+
   it('uses bearer-authenticated CRUD requests for office rules without office_id', async () => {
     const fetchImpl = vi.fn().mockResolvedValue({
       ok: true,

@@ -7,6 +7,7 @@ export class ApiAccessError extends Error {
 }
 
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
+const MAX_DEANONYMIZATION_RESPONSE_CHARACTERS = 50_000;
 const ALLOWED_EXTENSIONS = new Set(['pdf', 'docx']);
 
 function requestFailedError() {
@@ -62,6 +63,12 @@ export function createProductApi({ baseUrl, getAccessToken, fetchImpl = fetch })
     }
 
     if (response.status === 422) {
+      if (path.endsWith('/deanonymize-response')) {
+        throw new ApiAccessError(
+          'RESPONSE_TEXT_INVALID',
+          'Tekst odpowiedzi jest nieprawidłowy. Spróbuj ponownie.',
+        );
+      }
       if (path.startsWith('/office-rules')) {
         throw new ApiAccessError(
           'RULE_SAVE_FAILED',
@@ -121,6 +128,19 @@ export function createProductApi({ baseUrl, getAccessToken, fetchImpl = fetch })
     getAnonymizedDownload(documentId) {
       return request(`/documents/${encodeURIComponent(documentId)}/anonymized-download`, {
         method: 'GET',
+      });
+    },
+    deanonymizeResponse(documentId, responseText) {
+      if (responseText.length > MAX_DEANONYMIZATION_RESPONSE_CHARACTERS) {
+        return Promise.reject(new ApiAccessError(
+          'RESPONSE_TEXT_TOO_LONG',
+          'Tekst odpowiedzi nie może przekraczać 50 000 znaków.',
+        ));
+      }
+      return request(`/documents/${encodeURIComponent(documentId)}/deanonymize-response`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ response_text: responseText }),
       });
     },
     listOfficeRules() {

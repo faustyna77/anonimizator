@@ -3,13 +3,13 @@ import { describe, expect, it } from 'vitest';
 import { createRequestGeneration } from './request-generation.js';
 
 describe('createRequestGeneration', () => {
-  it('invalidates an earlier request when the session changes', () => {
+  it('invalidates a pending deanonymization result when the session changes', () => {
     const generation = createRequestGeneration();
-    const officeASession = generation.advance();
-    const officeBSession = generation.advance();
+    const pendingDeanonymization = generation.advance();
 
-    expect(generation.isCurrent(officeASession)).toBe(false);
-    expect(generation.isCurrent(officeBSession)).toBe(true);
+    generation.advance();
+
+    expect(generation.isCurrent(pendingDeanonymization)).toBe(false);
   });
 
   it('captures the active generation for a request started in the current session', () => {

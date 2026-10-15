@@ -37,6 +37,11 @@ function App() {
   const [documentMessage, setDocumentMessage] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const [downloadingDocumentId, setDownloadingDocumentId] = useState(null);
+  const [selectedDeanonymizationDocumentId, setSelectedDeanonymizationDocumentId] = useState('');
+  const [responseText, setResponseText] = useState('');
+  const [deanonymizedResponse, setDeanonymizedResponse] = useState('');
+  const [deanonymizationMessage, setDeanonymizationMessage] = useState(null);
+  const [isDeanonymizing, setIsDeanonymizing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   function invalidateRequests() {
@@ -45,6 +50,14 @@ function App() {
 
   function isCurrentRequest(generation) {
     return requestGenerationRef.current.isCurrent(generation);
+  }
+
+  function clearDeanonymizationState() {
+    setSelectedDeanonymizationDocumentId('');
+    setResponseText('');
+    setDeanonymizedResponse('');
+    setDeanonymizationMessage(null);
+    setIsDeanonymizing(false);
   }
 
   function clearOfficeScopedUiState() {
@@ -59,6 +72,7 @@ function App() {
     setDeletingRuleId(null);
     setIsUploading(false);
     setDownloadingDocumentId(null);
+    clearDeanonymizationState();
   }
 
   function setActiveSession(nextSession) {
@@ -66,6 +80,7 @@ function App() {
     if (sessionTokenRef.current !== nextToken) {
       sessionTokenRef.current = nextToken;
       invalidateRequests();
+      clearDeanonymizationState();
     }
     const nextIdentity = nextSession?.user?.id ?? null;
     if (sessionIdentityRef.current !== nextIdentity) {
@@ -406,6 +421,52 @@ function App() {
     }
   }
 
+  function handleDeanonymizationDocumentChange(event) {
+    setSelectedDeanonymizationDocumentId(event.target.value);
+    setDeanonymizedResponse('');
+    setDeanonymizationMessage(null);
+  }
+
+  async function handleDeanonymization(event) {
+    event.preventDefault();
+    const generation = requestGenerationRef.current.capture();
+    setDeanonymizationMessage(null);
+    setDeanonymizedResponse('');
+    if (!selectedDeanonymizationDocumentId) {
+      setDeanonymizationMessage({ text: 'Wybierz gotowy dokument z historii.', role: 'alert' });
+      return;
+    }
+
+    setIsDeanonymizing(true);
+    try {
+      const result = await productApi().deanonymizeResponse(
+        selectedDeanonymizationDocumentId,
+        responseText,
+      );
+      if (isCurrentRequest(generation)) {
+        setDeanonymizedResponse(result.response_text);
+      }
+    } catch (error) {
+      if (!isCurrentRequest(generation)) {
+        return;
+      }
+      const message = await handleProductError(
+        error,
+        'Wynik deanonymizacji nie jest dostępny. Spróbuj ponownie.',
+        generation,
+      );
+      if (message && isCurrentRequest(generation)) {
+        setDeanonymizationMessage({ text: message, role: 'alert' });
+      }
+    } finally {
+      if (isCurrentRequest(generation)) {
+        setIsDeanonymizing(false);
+      }
+    }
+  }
+
+  const readyDocuments = documents.filter((document) => document.status === 'ready');
+
   if (isRestoringSession) {
     return <main className="panel"><p>Przywracanie sesji…</p></main>;
   }
@@ -559,6 +620,52 @@ function App() {
                 </li>
               ))}
             </ul>
+          )}
+        </section>
+
+        <section className="panel__card" aria-labelledby="response-deanonymization-title">
+          <h2 id="response-deanonymization-title">Przywróć dane w odpowiedzi AI</h2>
+          <p>Wybierz zanonimizowany dokument z historii i wklej odpowiedź AI. Tekst nie zostanie zapisany.</p>
+          {readyDocuments.length === 0 ? (
+            <p>Nie masz jeszcze gotowego dokumentu do wyboru.</p>
+          ) : (
+            <form className="panel__deanonymization-form" onSubmit={handleDeanonymization}>
+              <label htmlFor="deanonymization-document">Dokument źródłowy</label>
+              <select
+                id="deanonymization-document"
+                value={selectedDeanonymizationDocumentId}
+                onChange={handleDeanonymizationDocumentChange}
+              >
+                <option value="">Wybierz dokument</option>
+                {readyDocuments.map((document) => (
+                  <option key={document.document_id} value={document.document_id}>
+                    {document.original_filename || 'Dokument bez nazwy'}
+                  </option>
+                ))}
+              </select>
+
+              <label htmlFor="response-text">Odpowiedź AI</label>
+              <textarea
+                id="response-text"
+                value={responseText}
+                onChange={(event) => setResponseText(event.target.value)}
+                maxLength={50_000}
+                rows="8"
+                required
+              />
+              <p>{responseText.length} / 50 000 znaków</p>
+
+              <button type="submit" disabled={!selectedDeanonymizationDocumentId || isDeanonymizing}>
+                {isDeanonymizing ? 'Przywracanie…' : 'Przywróć dane'}
+              </button>
+            </form>
+          )}
+          {deanonymizationMessage && <p role={deanonymizationMessage.role}>{deanonymizationMessage.text}</p>}
+          {deanonymizedResponse && (
+            <div className="panel__deanonymization-result">
+              <h3>Wynik</h3>
+              <textarea value={deanonymizedResponse} readOnly rows="8" aria-label="Wynik deanonymizacji" />
+            </div>
           )}
         </section>
       </main>

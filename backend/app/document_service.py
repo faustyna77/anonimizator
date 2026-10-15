@@ -4,6 +4,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 import json
+import re
 from typing import Callable
 from uuid import UUID, uuid4
 
@@ -17,6 +18,8 @@ from backend.app.database import get_session_factory
 from backend.app.document_formats import DocumentProcessingError, anonymize_docx, anonymize_pdf
 from backend.app.storage import DocumentMappingCipher, DocumentStorage
 from backend.app.office_rule_service import OfficeRuleService, OfficeRuleSnapshotProvider
+
+_MARKER_KEY = re.compile(r"^\[[A-Z][A-Z0-9_]{0,31}_[1-9]\d*\]$")
 
 
 @dataclass(frozen=True)
@@ -134,6 +137,69 @@ class DocumentProcessingService:
         except Exception:
             # The original exception remains the only client-visible result.
             return
+
+
+class ResponseDeanonymizationService:
+    """Restore only known markers from one office-scoped document mapping."""
+
+    def __init__(
+        self,
+        *,
+        session_factory: Callable[[], Session],
+        mapping_cipher: DocumentMappingCipher,
+    ):
+        self._session_factory = session_factory
+        self._mapping_cipher = mapping_cipher
+
+    @classmethod
+    def from_settings(cls, settings: Settings) -> "ResponseDeanonymizationService":
+        return cls(
+            session_factory=get_session_factory(),
+            mapping_cipher=DocumentMappingCipher.from_settings(settings),
+        )
+
+    def deanonymize_response(
+        self,
+        access_context: AccessContext,
+        document_id: UUID,
+        response_text: str,
+    ) -> str | None:
+        """Return a restored response only for a ready document in the trusted office."""
+        session = self._session_factory()
+        try:
+            with session.begin():
+                document = document_repository.get_document_for_access_context(
+                    session, access_context, document_id
+                )
+                if (
+                    document is None
+                    or document.status != "ready"
+                    or document.encrypted_mapping is None
+                ):
+                    return None
+                encrypted_mapping = document.encrypted_mapping
+            mapping = self._decrypt_mapping(encrypted_mapping)
+            if not mapping:
+                return None
+            marker_pattern = "|".join(re.escape(marker) for marker in sorted(mapping, key=len, reverse=True))
+            return re.sub(marker_pattern, lambda match: mapping[match.group(0)], response_text)
+        finally:
+            session.close()
+
+    def _decrypt_mapping(self, encrypted_mapping: bytes) -> dict[str, str] | None:
+        try:
+            decoded_mapping = self._mapping_cipher.decrypt(encrypted_mapping).decode("utf-8")
+            mapping = json.loads(decoded_mapping)
+        except Exception:
+            return None
+        if not isinstance(mapping, dict) or not mapping or not all(
+            isinstance(marker, str)
+            and _MARKER_KEY.fullmatch(marker)
+            and isinstance(value, str)
+            for marker, value in mapping.items()
+        ):
+            return None
+        return mapping
 
 
 @dataclass(frozen=True)

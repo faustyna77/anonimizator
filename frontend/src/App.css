@@ -212,10 +212,27 @@
   border-radius: 8px;
 }
 
-.panel__upload-form {
+.panel__upload-form,
+.panel__deanonymization-form {
   display: grid;
   gap: 12px;
   margin-top: 16px;
+}
+
+.panel__deanonymization-result {
+  display: grid;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.panel__deanonymization-result h3 {
+  margin: 0;
+}
+
+.panel__deanonymization-result textarea {
+  width: 100%;
+  box-sizing: border-box;
+  resize: vertical;
 }
 
 .panel button {

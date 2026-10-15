@@ -15,6 +15,7 @@ from backend.app.document_service import (
     DocumentProcessingError,
     DocumentProcessingResult,
     DocumentProcessingService,
+    ResponseDeanonymizationService,
 )
 from backend.app.document_upload import UploadValidationError, parse_uploaded_document
 from backend.app.office_rule_service import (
@@ -24,6 +25,8 @@ from backend.app.office_rule_service import (
     OfficeRuleService,
     parse_office_rule_payload,
 )
+
+_MAX_DEANONYMIZATION_RESPONSE_LENGTH = 50_000
 
 
 class DocumentProcessor(Protocol):
@@ -46,6 +49,15 @@ class DocumentAccessProcessor(Protocol):
     ) -> str | None: ...
 
 
+class ResponseDeanonymizationProcessor(Protocol):
+    def deanonymize_response(
+        self,
+        access_context: AccessContext,
+        document_id: UUID,
+        response_text: str,
+    ) -> str | None: ...
+
+
 class AnonymizedDocumentResponse(BaseModel):
     document_id: str
     original_filename: str
@@ -65,6 +77,10 @@ class DocumentHistoryResponse(BaseModel):
 
 class AnonymizedDownloadResponse(BaseModel):
     download_url: str
+
+
+class DeanonymizedResponse(BaseModel):
+    response_text: str
 
 
 class OfficeRuleResponse(BaseModel):
@@ -90,6 +106,7 @@ def create_app(
     document_service: Optional[DocumentProcessor] = None,
     document_access_service: Optional[DocumentAccessProcessor] = None,
     office_rule_service: Optional[OfficeRuleProcessor] = None,
+    deanonymization_service: Optional[ResponseDeanonymizationProcessor] = None,
 ) -> FastAPI:
     """Build the API with public health checks and protected product routes."""
     resolved_settings = settings if settings is not None else get_settings()
@@ -220,6 +237,36 @@ def create_app(
         if download_url is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="An anonymized result is unavailable.")
         return AnonymizedDownloadResponse(download_url=download_url)
+
+    @app.post("/documents/{document_id}/deanonymize-response", response_model=DeanonymizedResponse)
+    async def deanonymize_response(
+        document_id: UUID,
+        request: Request,
+        access_context: AccessContext = Depends(get_current_access_context),
+    ) -> DeanonymizedResponse:
+        try:
+            payload = await request.json()
+            response_text = payload["response_text"]
+        except (KeyError, TypeError, ValueError):
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail="The response text is invalid.",
+            )
+        if (
+            not isinstance(payload, dict)
+            or set(payload) != {"response_text"}
+            or not isinstance(response_text, str)
+            or len(response_text) > _MAX_DEANONYMIZATION_RESPONSE_LENGTH
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail="The response text is invalid.",
+            )
+        processor = deanonymization_service or ResponseDeanonymizationService.from_settings(resolved_settings)
+        restored_response = processor.deanonymize_response(access_context, document_id, response_text)
+        if restored_response is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="An anonymized result is unavailable.")
+        return DeanonymizedResponse(response_text=restored_response)
 
     def custom_openapi():
         if app.openapi_schema:

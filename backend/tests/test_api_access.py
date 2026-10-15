@@ -105,17 +105,50 @@ class FakeDocumentAccessService:
         return self.download_urls.get((access_context.office_id, document_id))
 
 
+class FakeResponseDeanonymizationService:
+    def __init__(self):
+        self.calls = []
+
+    def deanonymize_response(self, access_context, document_id, response_text):
+        self.calls.append((access_context, document_id, response_text))
+        return response_text.replace("[KLIENT_1]", "Jan Kowalski")
+
+
+class UnavailableResponseDeanonymizationService:
+    def __init__(self):
+        self.calls = []
+
+    def deanonymize_response(self, access_context, document_id, response_text):
+        self.calls.append((access_context, document_id, response_text))
+        return None
+
+
+class OfficeScopedResponseDeanonymizationService:
+    def __init__(self, owner_context, document_id):
+        self.owner_context = owner_context
+        self.document_id = document_id
+        self.calls = []
+
+    def deanonymize_response(self, access_context, document_id, response_text):
+        self.calls.append((access_context, document_id, response_text))
+        if access_context != self.owner_context or document_id != self.document_id:
+            return None
+        return response_text.replace("[KLIENT_1]", "Jan Kowalski")
+
+
 def build_client(
     settings: Optional[Settings] = None,
     document_service=None,
     document_access_service=None,
     office_rule_service=None,
+    deanonymization_service=None,
 ) -> tuple[TestClient, FastAPI]:
     app = create_app(
         settings or Settings(panel_allowed_origins="http://panel.test"),
         document_service=document_service,
         document_access_service=document_access_service,
         office_rule_service=office_rule_service,
+        deanonymization_service=deanonymization_service,
     )
     return TestClient(app), app
 
@@ -151,6 +184,89 @@ def test_office_rules_requires_a_token():
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
     assert response.json() == {"detail": "Invalid or missing access token"}
     assert response.headers["www-authenticate"] == "Bearer"
+
+
+def test_deanonymize_response_uses_server_derived_context_and_returns_only_restored_text():
+    service = FakeResponseDeanonymizationService()
+    client, app = build_client(document_service=FakeDocumentService(), deanonymization_service=service)
+    context = _context()
+    document_id = UUID("00000000-0000-0000-0000-000000000003")
+    app.dependency_overrides[get_current_access_context] = lambda: context
+
+    response = client.post(
+        f"/documents/{document_id}/deanonymize-response",
+        headers={"Authorization": "Bearer controlled-token"},
+        json={"response_text": "Odpowiedź dla [KLIENT_1]."},
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == {"response_text": "Odpowiedź dla Jan Kowalski."}
+    assert service.calls == [(context, document_id, "Odpowiedź dla [KLIENT_1].")]
+    assert "office_id" not in response.text
+    assert "mapping" not in response.text
+
+
+def test_deanonymize_response_does_not_restore_a_foreign_office_document():
+    owner_context = _context()
+    foreign_context = AccessContext(
+        user_id="foreign-user",
+        profile_id=UUID("00000000-0000-0000-0000-000000000004"),
+        office_id=UUID("00000000-0000-0000-0000-000000000005"),
+    )
+    document_id = UUID("00000000-0000-0000-0000-000000000003")
+    service = OfficeScopedResponseDeanonymizationService(owner_context, document_id)
+    client, app = build_client(document_service=FakeDocumentService(), deanonymization_service=service)
+
+    app.dependency_overrides[get_current_access_context] = lambda: owner_context
+    own_response = client.post(
+        f"/documents/{document_id}/deanonymize-response",
+        headers={"Authorization": "Bearer controlled-token"},
+        json={"response_text": "Odpowiedź dla [KLIENT_1]."},
+    )
+    app.dependency_overrides[get_current_access_context] = lambda: foreign_context
+    foreign_response = client.post(
+        f"/documents/{document_id}/deanonymize-response",
+        headers={"Authorization": "Bearer controlled-token"},
+        json={"response_text": "Odpowiedź dla [KLIENT_1]."},
+    )
+
+    assert own_response.status_code == status.HTTP_200_OK
+    assert own_response.json() == {"response_text": "Odpowiedź dla Jan Kowalski."}
+    assert foreign_response.status_code == status.HTTP_404_NOT_FOUND
+    assert foreign_response.json() == {"detail": "An anonymized result is unavailable."}
+    assert "Jan Kowalski" not in foreign_response.text
+    assert service.calls == [
+        (owner_context, document_id, "Odpowiedź dla [KLIENT_1]."),
+        (foreign_context, document_id, "Odpowiedź dla [KLIENT_1]."),
+    ]
+
+
+def test_deanonymize_response_hides_unavailable_mapping_details_and_rejects_oversized_text():
+    service = UnavailableResponseDeanonymizationService()
+    client, app = build_client(document_service=FakeDocumentService(), deanonymization_service=service)
+    context = _context()
+    document_id = UUID("00000000-0000-0000-0000-000000000003")
+    app.dependency_overrides[get_current_access_context] = lambda: context
+    response_text = "synthetic-private-response" * 3_000
+
+    unavailable = client.post(
+        f"/documents/{document_id}/deanonymize-response",
+        headers={"Authorization": "Bearer controlled-token"},
+        json={"response_text": "[KLIENT_1]"},
+    )
+    oversized = client.post(
+        f"/documents/{document_id}/deanonymize-response",
+        headers={"Authorization": "Bearer controlled-token"},
+        json={"response_text": response_text},
+    )
+
+    assert unavailable.status_code == status.HTTP_404_NOT_FOUND
+    assert unavailable.json() == {"detail": "An anonymized result is unavailable."}
+    assert oversized.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+    assert oversized.json() == {"detail": "The response text is invalid."}
+    assert response_text not in oversized.text
+    assert service.calls == [(context, document_id, "[KLIENT_1]")]
+
 
 
 def test_list_office_rules_uses_the_injected_service_and_never_returns_office_id():
