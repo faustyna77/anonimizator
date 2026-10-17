@@ -247,24 +247,24 @@ Brak migracji danych, API lub konfiguracji wdrożeniowej. Jedynym wymaganiem lok
 
 #### Automated
 
-- [x] 1.1 `npm run lint` uruchamia Oxlint i guard UI bez trafień dla oczyszczonego widoku oraz komponentów UI.
-- [x] 1.2 Guard UI wypisuje wynik skanu dla ustalonego zbioru plików i kończy się błędem po celowym, tymczasowym literalnym kolorze w pliku widoku.
+- [x] 1.1 `npm run lint` uruchamia Oxlint i guard UI bez trafień dla oczyszczonego widoku oraz komponentów UI. — 8dde83d
+- [x] 1.2 Guard UI wypisuje wynik skanu dla ustalonego zbioru plików i kończy się błędem po celowym, tymczasowym literalnym kolorze w pliku widoku. — 8dde83d
 
 #### Manual
 
-- [x] 1.3 `visual-verification.md` zawiera wynik bazowy 0 oraz komplet poleceń instalacji i późniejszych zrzutów bez dodawania browser-test dependency do projektu.
+- [x] 1.3 `visual-verification.md` zawiera wynik bazowy 0 oraz komplet poleceń instalacji i późniejszych zrzutów bez dodawania browser-test dependency do projektu. — 8dde83d
 
 ### Phase 2: Semantyczne tokeny panelu
 
 #### Automated
 
-- [ ] 2.1 `npm run lint` przechodzi po aktualizacji tokenów i styli panelu.
-- [ ] 2.2 `npm run build` przechodzi z zachowanym light i dark CSS.
+- [x] 2.1 `npm run lint` przechodzi po aktualizacji tokenów i styli panelu.
+- [x] 2.2 `npm run build` przechodzi z zachowanym light i dark CSS.
 
 #### Manual
 
-- [ ] 2.3 W obu ustawieniach preferencji motywu kontrast tekstu, powierzchni, primary action, disabled i focus ringu jest czytelny.
-- [ ] 2.4 `token-contract.md` wskazuje role, źródło wartości i wynik kontroli dark mode.
+- [x] 2.3 W obu ustawieniach preferencji motywu kontrast tekstu, powierzchni, primary action, disabled i focus ringu jest czytelny.
+- [x] 2.4 `token-contract.md` wskazuje role, źródło wartości i wynik kontroli dark mode.
 
 ### Phase 3: Jeden uporządkowany widok i prymitywy
 
