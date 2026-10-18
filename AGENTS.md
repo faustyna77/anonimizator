@@ -27,3 +27,9 @@ FastAPI backend (`backend/app/main.py`) + Chrome extension (`chrome-extension/`)
 - `src/anonymizer_prawniczy/` is scaffold-only (`__init__.py` only); core anonymization logic not implemented.
 - `README.md` is stub (`# anonimizator`); do not rely on it for commands.
 - `CLAUDE.md` (course notes, 13KB) is present for lesson context; `AGENTS.md` (this file) is for agent work in repo.
+
+## Frontend UI contract
+- Source semantic UI tokens only from `frontend/src/index.css`.
+- Before adding a new primitive, inspect and reuse `frontend/src/components/ui/` (`Button`, `Card`, `Field`).
+- Do not place literal colors or arbitrary UI values in cleaned views; use the token and primitive contracts instead.
+- The dev-only state reference is `http://127.0.0.1:5173/?view=kitchen-sink`; it must stay gated by `import.meta.env.DEV`.

@@ -50,3 +50,12 @@ Docelowe artefakty z Fazy 4:
 - `context/changes/panel-kancelarii-ui/artifacts/mobile.png`
 
 Przed uznaniem bramki należy ręcznie sprawdzić na obu zrzutach: hierarchię uploadu, czytelność tokenów w light/dark mode oraz stany default, hover, focus-visible, disabled, error, empty i loading.
+
+## Faza 4 — wykonana bramka
+
+- `playwright-cli` zainstalowano globalnie; nie dodano zależności browser-test do `frontend/package.json`.
+- Kitchen sink jest dostępny wyłącznie lokalnie pod `http://127.0.0.1:5173/?view=kitchen-sink` i renderuje syntheticzny stan default, hover, focus-visible, disabled, error, empty oraz loading.
+- Zapisano `artifacts/desktop.png` przy szerokości 1280 px oraz `artifacts/mobile.png` po `resize 390 844`.
+- Kontrola dark mode potwierdziła powierzchnię strony, kartę i widoczny focus ring w wariancie ciemnym; zrzut kontrolny został oceniony przed zamknięciem bramki.
+- `npm run lint` po zmianie: guard UI 0 kandydatów w 7 plikach; wynik przed zmianą: 0 kandydatów w widoku i jego stylach.
+- Regułę dla kolejnych sesji zapisano w `AGENTS.md`, ponieważ repo jest obsługiwane przez Hermes; `CLAUDE.md` pozostaje materiałem lekcyjnym i nie został zmieniony.

@@ -180,11 +180,11 @@ Oddzielić stany zasobów od zawartości, pokazać pełną macierz stanów w śr
 
 #### 3. Reguła dla kolejnych sesji
 
-**Files**: `CLAUDE.md`, `context/changes/panel-kancelarii-ui/visual-verification.md`
+**Files**: `AGENTS.md`, `context/changes/panel-kancelarii-ui/visual-verification.md`
 
 **Intent**: Zapobiec powrotowi do literałów i równoległych prymitywów przy kolejnych zmianach widoku.
 
-**Contract**: Po zamykającym bloku `<!-- END @przeprogramowani/10x-cli -->` zostaje dodana krótka sekcja UI wskazująca `frontend/src/index.css` jako źródło tokenów, `frontend/src/components/ui/` jako katalog prymitywów, zakaz literalnych kolorów i wartości arbitralnych w widokach oraz lokalizację kitchen sinku. Dokument w katalogu zmiany zapisuje wynik skanu przed/po oraz wynik kontroli `npm run lint`.
+**Contract**: `AGENTS.md` zawiera krótką sekcję UI dla Hermes, wskazującą `frontend/src/index.css` jako źródło tokenów, `frontend/src/components/ui/` jako katalog prymitywów, zakaz literalnych kolorów i wartości arbitralnych w widokach oraz lokalizację kitchen sinku. Dokument w katalogu zmiany zapisuje wynik skanu przed/po oraz wynik kontroli `npm run lint`.
 
 ### Success Criteria:
 
@@ -198,7 +198,7 @@ Oddzielić stany zasobów od zawartości, pokazać pełną macierz stanów w śr
 
 - Kitchen sink pokazuje default, hover, focus-visible, disabled, error, empty i loading na desktopie oraz przy szerokości 390 px.
 - `artifacts/desktop.png` i `artifacts/mobile.png` dokumentują zamierzoną hierarchię uploadu oraz czytelny fokus, a `visual-verification.md` zapisuje kontrolę dark mode.
-- `CLAUDE.md` zawiera regułę UI poza blokiem 10x-cli, a `visual-verification.md` zapisuje wyniki skanu 0 przed i po zmianie.
+- `AGENTS.md` zawiera regułę UI dla Hermes, a `visual-verification.md` zapisuje wyniki skanu 0 przed i po zmianie.
 
 **Implementation Note**: Po ukończeniu fazy i zielonych kontrolach automatycznych zatrzymaj się na potwierdzenie ręcznej weryfikacji przed uruchomieniem `/10x-impl-review`.
 
@@ -282,12 +282,12 @@ Brak migracji danych, API lub konfiguracji wdrożeniowej. Jedynym wymaganiem lok
 
 #### Automated
 
-- [ ] 4.1 Nowe testy Vitest pokrywają rozróżnienie loading, error i ready/empty dla dokumentów oraz reguł.
-- [ ] 4.2 `npm test`, `npm run lint` i `npm run build` przechodzą po dodaniu state modelu i dev-only bramki.
-- [ ] 4.3 Build produkcyjny nie udostępnia kitchen sinku przez parametr widoku.
+- [x] 4.1 Nowe testy Vitest pokrywają rozróżnienie loading, error i ready/empty dla dokumentów oraz reguł.
+- [x] 4.2 `npm test`, `npm run lint` i `npm run build` przechodzą po dodaniu state modelu i dev-only bramki.
+- [x] 4.3 Build produkcyjny nie udostępnia kitchen sinku przez parametr widoku.
 
 #### Manual
 
-- [ ] 4.4 Kitchen sink pokazuje default, hover, focus-visible, disabled, error, empty i loading na desktopie oraz przy szerokości 390 px.
-- [ ] 4.5 `artifacts/desktop.png` i `artifacts/mobile.png` dokumentują zamierzoną hierarchię uploadu oraz czytelny fokus, a `visual-verification.md` zapisuje kontrolę dark mode.
-- [ ] 4.6 `CLAUDE.md` zawiera regułę UI poza blokiem 10x-cli, a `visual-verification.md` zapisuje wyniki skanu 0 przed i po zmianie.
+- [x] 4.4 Kitchen sink pokazuje default, hover, focus-visible, disabled, error, empty i loading na desktopie oraz przy szerokości 390 px.
+- [x] 4.5 `artifacts/desktop.png` i `artifacts/mobile.png` dokumentują zamierzoną hierarchię uploadu oraz czytelny fokus, a `visual-verification.md` zapisuje kontrolę dark mode.
+- [x] 4.6 `AGENTS.md` zawiera regułę UI dla Hermes, a `visual-verification.md` zapisuje wyniki skanu 0 przed i po zmianie.

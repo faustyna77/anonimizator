@@ -4,6 +4,12 @@ import { ApiAccessError, createProductApi, validateDocumentUpload } from './api.
 import { createRequestGeneration } from './request-generation.js';
 import { createRuleDraft, createRuleDrafts, resetRuleDrafts } from './rule-drafts.js';
 import {
+  createLoadingResource,
+  createReadyResource,
+  createResourceError,
+  isEmptyResource,
+} from './panel-resource-state.js';
+import {
   createSupabaseAuthClient,
   restoreSession,
   signInWithPassword,
@@ -28,14 +34,14 @@ function App() {
   const [password, setPassword] = useState('');
   const [authMessage, setAuthMessage] = useState('');
   const [selectedFile, setSelectedFile] = useState(null);
-  const [documents, setDocuments] = useState([]);
-  const [officeRules, setOfficeRules] = useState([]);
+  const [documentsResource, setDocumentsResource] = useState(createLoadingResource);
+  const [officeRulesResource, setOfficeRulesResource] = useState(createLoadingResource);
   const [ruleDrafts, setRuleDrafts] = useState(createRuleDrafts);
   const [editingRule, setEditingRule] = useState(null);
   const [ruleMessage, setRuleMessage] = useState(null);
   const [savingRuleKind, setSavingRuleKind] = useState(null);
   const [deletingRuleId, setDeletingRuleId] = useState(null);
-  const [documentMessage, setDocumentMessage] = useState('');
+  const [documentMessage, setDocumentMessage] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
   const [downloadingDocumentId, setDownloadingDocumentId] = useState(null);
   const [selectedDeanonymizationDocumentId, setSelectedDeanonymizationDocumentId] = useState('');
@@ -44,6 +50,8 @@ function App() {
   const [deanonymizationMessage, setDeanonymizationMessage] = useState(null);
   const [isDeanonymizing, setIsDeanonymizing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const documents = documentsResource.data;
+  const officeRules = officeRulesResource.data;
 
   function invalidateRequests() {
     requestGenerationRef.current.advance();
@@ -62,12 +70,12 @@ function App() {
   }
 
   function clearOfficeScopedUiState() {
-    setDocuments([]);
-    setOfficeRules([]);
+    setDocumentsResource(createLoadingResource());
+    setOfficeRulesResource(createLoadingResource());
     setRuleDrafts(resetRuleDrafts());
     setEditingRule(null);
     setRuleMessage(null);
-    setDocumentMessage('');
+    setDocumentMessage(null);
     setSelectedFile(null);
     setSavingRuleKind(null);
     setDeletingRuleId(null);
@@ -137,7 +145,7 @@ function App() {
   async function handleAuthentication(event) {
     event.preventDefault();
     setAuthMessage('');
-    setDocumentMessage('');
+    setDocumentMessage(null);
     setRuleMessage(null);
     setIsSubmitting(true);
 
@@ -199,10 +207,14 @@ function App() {
   }
 
   async function loadDocuments(generation = requestGenerationRef.current.capture()) {
+    if (!isCurrentRequest(generation)) {
+      return;
+    }
+    setDocumentsResource(createLoadingResource());
     try {
       const nextDocuments = await productApi().listDocuments();
       if (isCurrentRequest(generation)) {
-        setDocuments(nextDocuments);
+        setDocumentsResource(createReadyResource(nextDocuments));
       }
     } catch (error) {
       if (!isCurrentRequest(generation)) {
@@ -210,16 +222,20 @@ function App() {
       }
       const message = await handleProductError(error, 'Nie udało się pobrać historii dokumentów.', generation);
       if (message && isCurrentRequest(generation)) {
-        setDocumentMessage(message);
+        setDocumentsResource(createResourceError(message));
       }
     }
   }
 
   async function loadOfficeRules(generation = requestGenerationRef.current.capture()) {
+    if (!isCurrentRequest(generation)) {
+      return;
+    }
+    setOfficeRulesResource(createLoadingResource());
     try {
       const nextOfficeRules = await productApi().listOfficeRules();
       if (isCurrentRequest(generation)) {
-        setOfficeRules(nextOfficeRules);
+        setOfficeRulesResource(createReadyResource(nextOfficeRules));
       }
     } catch (error) {
       if (!isCurrentRequest(generation)) {
@@ -227,7 +243,7 @@ function App() {
       }
       const message = await handleProductError(error, 'Nie udało się pobrać reguł kancelarii.', generation);
       if (message && isCurrentRequest(generation)) {
-        setRuleMessage({ text: message, role: 'alert' });
+        setOfficeRulesResource(createResourceError(message));
       }
     }
   }
@@ -340,8 +356,8 @@ function App() {
   useEffect(() => {
     const generation = requestGenerationRef.current.capture();
     if (!session) {
-      setDocuments([]);
-      setOfficeRules([]);
+      setDocumentsResource(createLoadingResource());
+      setOfficeRulesResource(createLoadingResource());
       return undefined;
     }
     void loadDocuments(generation);
@@ -351,7 +367,7 @@ function App() {
 
   function handleFileSelection(event) {
     const file = event.target.files?.[0] || null;
-    setDocumentMessage('');
+    setDocumentMessage(null);
     if (!file) {
       setSelectedFile(null);
       return;
@@ -361,7 +377,7 @@ function App() {
       setSelectedFile(file);
     } catch (error) {
       setSelectedFile(null);
-      setDocumentMessage(error.message || 'Wybierz prawidłowy plik.');
+      setDocumentMessage({ text: error.message || 'Wybierz prawidłowy plik.', role: 'alert' });
       event.target.value = '';
     }
   }
@@ -369,9 +385,9 @@ function App() {
   async function handleUpload(event) {
     event.preventDefault();
     const generation = requestGenerationRef.current.capture();
-    setDocumentMessage('');
+    setDocumentMessage(null);
     if (!selectedFile) {
-      setDocumentMessage('Wybierz jeden plik PDF lub DOCX.');
+      setDocumentMessage({ text: 'Wybierz jeden plik PDF lub DOCX.', role: 'alert' });
       return;
     }
     setIsUploading(true);
@@ -381,7 +397,7 @@ function App() {
         return;
       }
       setSelectedFile(null);
-      setDocumentMessage('Dokument został zanonimizowany i jest gotowy do pobrania.');
+      setDocumentMessage({ text: 'Dokument został zanonimizowany i jest gotowy do pobrania.', role: 'status' });
       await loadDocuments(generation);
     } catch (error) {
       if (!isCurrentRequest(generation)) {
@@ -389,7 +405,7 @@ function App() {
       }
       const message = await handleProductError(error, 'Nie udało się przesłać dokumentu.', generation);
       if (message && isCurrentRequest(generation)) {
-        setDocumentMessage(message);
+        setDocumentMessage({ text: message, role: 'alert' });
       }
     } finally {
       if (isCurrentRequest(generation)) {
@@ -400,7 +416,7 @@ function App() {
 
   async function handleDownload(documentId) {
     const generation = requestGenerationRef.current.capture();
-    setDocumentMessage('');
+    setDocumentMessage(null);
     setDownloadingDocumentId(documentId);
     try {
       const { download_url: downloadUrl } = await productApi().getAnonymizedDownload(documentId);
@@ -413,7 +429,7 @@ function App() {
       }
       const message = await handleProductError(error, 'Nie udało się pobrać wyniku anonimizacji.', generation);
       if (message && isCurrentRequest(generation)) {
-        setDocumentMessage(message);
+        setDocumentMessage({ text: message, role: 'alert' });
       }
     } finally {
       if (isCurrentRequest(generation)) {
@@ -504,7 +520,7 @@ function App() {
                 {isUploading ? 'Przesyłanie…' : 'Anonimizuj dokument'}
               </Button>
             </form>
-            {documentMessage && <p role="status">{documentMessage}</p>}
+            {documentMessage && <p role={documentMessage.role}>{documentMessage.text}</p>}
           </Card>
 
           <Card
@@ -513,6 +529,15 @@ function App() {
             titleId="office-rules-title"
           >
           {ruleMessage && <p role={ruleMessage.role}>{ruleMessage.text}</p>}
+          {officeRulesResource.status === 'loading' && <p role="status">Ładowanie reguł kancelarii…</p>}
+          {officeRulesResource.status === 'error' && (
+            <>
+              <p role="alert">{officeRulesResource.error}</p>
+              <Button variant="secondary" onClick={() => { void loadOfficeRules(); }}>
+                Spróbuj ponownie
+              </Button>
+            </>
+          )}
 
           <div className="panel__rule-sections">
             {RULE_KINDS.map((kind) => {
@@ -572,31 +597,33 @@ function App() {
                     </div>
                   </form>
 
-                  {rules.length === 0 ? (
-                    <p>Nie dodano jeszcze reguł tego typu.</p>
-                  ) : (
-                    <ul className="panel__rule-list">
-                      {rules.map((rule) => (
-                        <li key={rule.rule_id}>
-                          <div>
-                            <strong>{rule.pattern}</strong>
-                            <p>Marker: {rule.marker_label} · {rule.enabled ? 'Aktywna' : 'Wyłączona'}</p>
-                          </div>
-                          <div className="panel__rule-actions">
-                            <Button variant="secondary" onClick={() => handleEditRule(rule)}>
-                              Edytuj
-                            </Button>
-                            <Button
-                              variant="destructive"
-                              onClick={() => handleRuleDelete(rule)}
-                              disabled={deletingRuleId === rule.rule_id}
-                            >
-                              {deletingRuleId === rule.rule_id ? 'Usuwanie…' : 'Usuń'}
-                            </Button>
-                          </div>
-                        </li>
-                      ))}
-                    </ul>
+                  {officeRulesResource.status === 'ready' && (
+                    rules.length === 0 ? (
+                      <p>Nie dodano jeszcze reguł tego typu.</p>
+                    ) : (
+                      <ul className="panel__rule-list">
+                        {rules.map((rule) => (
+                          <li key={rule.rule_id}>
+                            <div>
+                              <strong>{rule.pattern}</strong>
+                              <p>Marker: {rule.marker_label} · {rule.enabled ? 'Aktywna' : 'Wyłączona'}</p>
+                            </div>
+                            <div className="panel__rule-actions">
+                              <Button variant="secondary" onClick={() => handleEditRule(rule)}>
+                                Edytuj
+                              </Button>
+                              <Button
+                                variant="destructive"
+                                onClick={() => handleRuleDelete(rule)}
+                                disabled={deletingRuleId === rule.rule_id}
+                              >
+                                {deletingRuleId === rule.rule_id ? 'Usuwanie…' : 'Usuń'}
+                              </Button>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    )
                   )}
                 </section>
               );
@@ -606,9 +633,17 @@ function App() {
 
           <div className="panel__support-grid">
             <Card title="Historia dokumentów" titleId="document-history-title">
-              {documents.length === 0 ? (
-                <p>Nie przesłano jeszcze dokumentów.</p>
-              ) : (
+              {documentsResource.status === 'loading' && <p role="status">Ładowanie historii dokumentów…</p>}
+              {documentsResource.status === 'error' && (
+                <>
+                  <p role="alert">{documentsResource.error}</p>
+                  <Button variant="secondary" onClick={() => { void loadDocuments(); }}>
+                    Spróbuj ponownie
+                  </Button>
+                </>
+              )}
+              {isEmptyResource(documentsResource) && <p>Nie przesłano jeszcze dokumentów.</p>}
+              {documentsResource.status === 'ready' && !isEmptyResource(documentsResource) && (
                 <ul className="panel__document-list">
                   {documents.map((document) => (
                     <li key={document.document_id}>
@@ -634,9 +669,12 @@ function App() {
               title="Przywróć dane w odpowiedzi AI"
               titleId="response-deanonymization-title"
             >
-              {readyDocuments.length === 0 ? (
+              {documentsResource.status === 'loading' && <p role="status">Ładowanie dokumentów do wyboru…</p>}
+              {documentsResource.status === 'error' && <p role="alert">Nie można wybrać dokumentu, dopóki historia nie zostanie pobrana.</p>}
+              {documentsResource.status === 'ready' && readyDocuments.length === 0 && (
                 <p>Nie masz jeszcze gotowego dokumentu do wyboru.</p>
-              ) : (
+              )}
+              {documentsResource.status === 'ready' && readyDocuments.length > 0 && (
                 <form className="panel__deanonymization-form" onSubmit={handleDeanonymization}>
                   <Field id="deanonymization-document" label="Dokument źródłowy">
                     <select
