@@ -282,12 +282,12 @@ Brak migracji danych, API lub konfiguracji wdrożeniowej. Jedynym wymaganiem lok
 
 #### Automated
 
-- [x] 4.1 Nowe testy Vitest pokrywają rozróżnienie loading, error i ready/empty dla dokumentów oraz reguł.
-- [x] 4.2 `npm test`, `npm run lint` i `npm run build` przechodzą po dodaniu state modelu i dev-only bramki.
-- [x] 4.3 Build produkcyjny nie udostępnia kitchen sinku przez parametr widoku.
+- [x] 4.1 Nowe testy Vitest pokrywają rozróżnienie loading, error i ready/empty dla dokumentów oraz reguł. — 3f70c6b
+- [x] 4.2 `npm test`, `npm run lint` i `npm run build` przechodzą po dodaniu state modelu i dev-only bramki. — 3f70c6b
+- [x] 4.3 Build produkcyjny nie udostępnia kitchen sinku przez parametr widoku. — 3f70c6b
 
 #### Manual
 
-- [x] 4.4 Kitchen sink pokazuje default, hover, focus-visible, disabled, error, empty i loading na desktopie oraz przy szerokości 390 px.
-- [x] 4.5 `artifacts/desktop.png` i `artifacts/mobile.png` dokumentują zamierzoną hierarchię uploadu oraz czytelny fokus, a `visual-verification.md` zapisuje kontrolę dark mode.
-- [x] 4.6 `AGENTS.md` zawiera regułę UI dla Hermes, a `visual-verification.md` zapisuje wyniki skanu 0 przed i po zmianie.
+- [x] 4.4 Kitchen sink pokazuje default, hover, focus-visible, disabled, error, empty i loading na desktopie oraz przy szerokości 390 px. — 3f70c6b
+- [x] 4.5 `artifacts/desktop.png` i `artifacts/mobile.png` dokumentują zamierzoną hierarchię uploadu oraz czytelny fokus, a `visual-verification.md` zapisuje kontrolę dark mode. — 3f70c6b
+- [x] 4.6 `AGENTS.md` zawiera regułę UI dla Hermes, a `visual-verification.md` zapisuje wyniki skanu 0 przed i po zmianie. — 3f70c6b

@@ -1,9 +1,9 @@
 ---
 change_id: panel-kancelarii-ui
 title: Panel kancelarii UI
-status: implementing
+status: implemented
 created: 2026-10-16
-updated: 2026-10-16
+updated: 2026-10-18
 archived_at: null
 ---
 
