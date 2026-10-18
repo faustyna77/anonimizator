@@ -258,25 +258,25 @@ Brak migracji danych, API lub konfiguracji wdrożeniowej. Jedynym wymaganiem lok
 
 #### Automated
 
-- [x] 2.1 `npm run lint` przechodzi po aktualizacji tokenów i styli panelu.
-- [x] 2.2 `npm run build` przechodzi z zachowanym light i dark CSS.
+- [x] 2.1 `npm run lint` przechodzi po aktualizacji tokenów i styli panelu. — ece8a85
+- [x] 2.2 `npm run build` przechodzi z zachowanym light i dark CSS. — ece8a85
 
 #### Manual
 
-- [x] 2.3 W obu ustawieniach preferencji motywu kontrast tekstu, powierzchni, primary action, disabled i focus ringu jest czytelny.
-- [x] 2.4 `token-contract.md` wskazuje role, źródło wartości i wynik kontroli dark mode.
+- [x] 2.3 W obu ustawieniach preferencji motywu kontrast tekstu, powierzchni, primary action, disabled i focus ringu jest czytelny. — ece8a85
+- [x] 2.4 `token-contract.md` wskazuje role, źródło wartości i wynik kontroli dark mode. — ece8a85
 
 ### Phase 3: Jeden uporządkowany widok i prymitywy
 
 #### Automated
 
-- [ ] 3.1 `npm test`, `npm run lint` i `npm run build` przechodzą po wydzieleniu komponentów i refaktorze markup.
-- [ ] 3.2 Guard UI potwierdza brak literałów w `App`, jego stylach i `components/ui`.
+- [x] 3.1 `npm test`, `npm run lint` i `npm run build` przechodzą po wydzieleniu komponentów i refaktorze markup.
+- [x] 3.2 Guard UI potwierdza brak literałów w `App`, jego stylach i `components/ui`.
 
 #### Manual
 
-- [ ] 3.3 Na desktopie upload jest pierwszą i najbardziej rozpoznawalną akcją, a reguły, historia i deanonymizacja są nadal osiągalne bez zakładek.
-- [ ] 3.4 Każda kontrolka ma widoczną etykietę lub dostępną nazwę, a istniejące komunikaty statusu i błędu nadal są przekazywane przez odpowiednią rolę.
+- [x] 3.3 Na desktopie upload jest pierwszą i najbardziej rozpoznawalną akcją, a reguły, historia i deanonymizacja są nadal osiągalne bez zakładek.
+- [x] 3.4 Każda kontrolka ma widoczną etykietę lub dostępną nazwę, a istniejące komunikaty statusu i błędu nadal są przekazywane przez odpowiednią rolę.
 
 ### Phase 4: Nazwane stany i bramka wizualna
 

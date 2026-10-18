@@ -1,0 +1,119 @@
+.ui-button {
+  width: fit-content;
+  padding: 8px 12px;
+  border: 1px solid var(--action-primary);
+  border-radius: 6px;
+  color: var(--action-primary-text);
+  background: var(--action-primary);
+  cursor: pointer;
+}
+
+.ui-button:not(:disabled):hover {
+  border-color: var(--action-primary-hover);
+  background: var(--action-primary-hover);
+}
+
+.ui-button--secondary {
+  border-color: var(--action-secondary);
+  color: var(--action-secondary-text);
+  background: var(--action-secondary);
+}
+
+.ui-button--secondary:not(:disabled):hover {
+  border-color: var(--action-secondary-hover);
+  background: var(--action-secondary-hover);
+}
+
+.ui-button--destructive {
+  border-color: var(--action-destructive);
+  color: var(--action-destructive-text);
+  background: var(--action-destructive);
+}
+
+.ui-button--destructive:not(:disabled):hover {
+  border-color: var(--action-destructive-hover);
+  background: var(--action-destructive-hover);
+}
+
+.ui-button:disabled {
+  border-color: var(--disabled-surface);
+  color: var(--disabled-text);
+  background: var(--disabled-surface);
+  cursor: not-allowed;
+}
+
+.ui-field {
+  display: grid;
+  gap: 6px;
+}
+
+.ui-field__label {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.ui-field__description,
+.ui-field__error {
+  margin: 0;
+}
+
+.ui-field__description {
+  color: var(--text-secondary);
+}
+
+.ui-field__error {
+  padding: 8px;
+  color: var(--status-error);
+  background: var(--status-error-surface);
+}
+
+.ui-field input:not([type='checkbox']),
+.ui-field select,
+.ui-field textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 10px;
+}
+
+.ui-field textarea {
+  resize: vertical;
+}
+
+.ui-field--checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ui-field--checkbox .ui-field__label {
+  order: 2;
+}
+
+.ui-field--checkbox input {
+  width: auto;
+}
+
+.ui-card {
+  display: grid;
+  gap: 20px;
+  padding: 24px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  background: var(--surface-card);
+  box-shadow: var(--shadow-panel);
+}
+
+.ui-card--primary {
+  border-color: var(--action-primary);
+}
+
+.ui-card__header,
+.ui-card__body {
+  display: grid;
+  gap: 8px;
+}
+
+.ui-card__title,
+.ui-card__description {
+  margin: 0;
+}

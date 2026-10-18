@@ -10,6 +10,7 @@ import {
   signOut,
   signUpWithPassword,
 } from './auth.js';
+import { Button, Card, Field } from './components/ui/index.js';
 import './App.css';
 
 const API_BASE = import.meta.env.VITE_API_BASE || 'https://anonimizator.fly.dev';
@@ -479,31 +480,38 @@ function App() {
             <h1>Panel Kancelarii</h1>
             <p>Zalogowano jako {session.user?.email || 'użytkownik kancelarii'}.</p>
           </div>
-          <button type="button" onClick={handleSignOut}>Wyloguj</button>
+          <Button variant="secondary" onClick={handleSignOut}>Wyloguj</Button>
         </header>
 
-        <section className="panel__card" aria-labelledby="document-upload-title">
-          <h2 id="document-upload-title">Anonimizacja dokumentu</h2>
-          <p>Prześlij jeden plik PDF lub DOCX o rozmiarze do 10 MB.</p>
-          <form onSubmit={handleUpload} className="panel__upload-form">
-            <label htmlFor="document-file">Plik do anonimizacji</label>
-            <input
-              id="document-file"
-              type="file"
-              accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-              onChange={handleFileSelection}
-            />
-            {selectedFile && <p>Wybrano: {selectedFile.name}</p>}
-            <button type="submit" disabled={isUploading}>
-              {isUploading ? 'Przesyłanie…' : 'Anonimizuj dokument'}
-            </button>
-          </form>
-          {documentMessage && <p role="status">{documentMessage}</p>}
-        </section>
+        <div className="panel__workspace">
+          <Card
+            className="panel__upload-card"
+            description="Prześlij jeden plik PDF lub DOCX o rozmiarze do 10 MB."
+            title="Anonimizacja dokumentu"
+            titleId="document-upload-title"
+            variant="primary"
+          >
+            <form onSubmit={handleUpload} className="panel__upload-form">
+              <Field id="document-file" label="Plik do anonimizacji">
+                <input
+                  type="file"
+                  accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                  onChange={handleFileSelection}
+                />
+              </Field>
+              {selectedFile && <p>Wybrano: {selectedFile.name}</p>}
+              <Button type="submit" disabled={isUploading}>
+                {isUploading ? 'Przesyłanie…' : 'Anonimizuj dokument'}
+              </Button>
+            </form>
+            {documentMessage && <p role="status">{documentMessage}</p>}
+          </Card>
 
-        <section className="panel__card" aria-labelledby="office-rules-title">
-          <h2 id="office-rules-title">Reguły anonimizacji</h2>
-          <p>Dodawaj osobno dosłowne frazy i wyrażenia regularne dla kolejnych dokumentów.</p>
+          <Card
+            description="Dodawaj osobno dosłowne frazy i wyrażenia regularne dla kolejnych dokumentów."
+            title="Reguły anonimizacji"
+            titleId="office-rules-title"
+          >
           {ruleMessage && <p role={ruleMessage.role}>{ruleMessage.text}</p>}
 
           <div className="panel__rule-sections">
@@ -522,46 +530,44 @@ function App() {
                     : 'Regex powinien opisywać wartość, którą chcesz ukryć.'}
                   </p>
                   <form className="panel__rule-form" onSubmit={(event) => handleRuleSave(event, kind)}>
-                    <label htmlFor={`${kind}-pattern`}>{isPhrase ? 'Fraza' : 'Wyrażenie regularne'}</label>
-                    <input
-                      id={`${kind}-pattern`}
-                      type="text"
-                      value={draft.pattern}
-                      onChange={(event) => updateRuleDraft(kind, 'pattern', event.target.value)}
-                      maxLength={isPhrase ? 255 : 512}
-                      required
-                    />
-
-                    <label htmlFor={`${kind}-marker-label`}>Etykieta markera</label>
-                    <input
-                      id={`${kind}-marker-label`}
-                      type="text"
-                      value={draft.marker_label}
-                      onChange={(event) => updateRuleDraft(kind, 'marker_label', event.target.value)}
-                      maxLength="32"
-                      pattern="[A-Z][A-Z0-9_]*"
-                      title="Użyj wielkich liter, cyfr i podkreślników; etykieta musi zaczynać się od litery."
-                      required
-                    />
-
-                    <label className="panel__checkbox" htmlFor={`${kind}-enabled`}>
+                    <Field id={`${kind}-pattern`} label={isPhrase ? 'Fraza' : 'Wyrażenie regularne'}>
                       <input
-                        id={`${kind}-enabled`}
+                        type="text"
+                        value={draft.pattern}
+                        onChange={(event) => updateRuleDraft(kind, 'pattern', event.target.value)}
+                        maxLength={isPhrase ? 255 : 512}
+                        required
+                      />
+                    </Field>
+
+                    <Field id={`${kind}-marker-label`} label="Etykieta markera">
+                      <input
+                        type="text"
+                        value={draft.marker_label}
+                        onChange={(event) => updateRuleDraft(kind, 'marker_label', event.target.value)}
+                        maxLength="32"
+                        pattern="[A-Z][A-Z0-9_]*"
+                        title="Użyj wielkich liter, cyfr i podkreślników; etykieta musi zaczynać się od litery."
+                        required
+                      />
+                    </Field>
+
+                    <Field className="ui-field--checkbox" id={`${kind}-enabled`} label="Reguła aktywna">
+                      <input
                         type="checkbox"
                         checked={draft.enabled}
                         onChange={(event) => updateRuleDraft(kind, 'enabled', event.target.checked)}
                       />
-                      Reguła aktywna
-                    </label>
+                    </Field>
 
                     <div className="panel__rule-actions">
-                      <button type="submit" disabled={isSaving}>
+                      <Button type="submit" disabled={isSaving}>
                         {isSaving ? 'Zapisywanie…' : isEditing ? 'Zapisz zmiany' : 'Dodaj regułę'}
-                      </button>
+                      </Button>
                       {isEditing && (
-                        <button type="button" onClick={() => resetRuleDraft(kind)} disabled={isSaving}>
+                        <Button variant="secondary" onClick={() => resetRuleDraft(kind)} disabled={isSaving}>
                           Anuluj edycję
-                        </button>
+                        </Button>
                       )}
                     </div>
                   </form>
@@ -577,16 +583,16 @@ function App() {
                             <p>Marker: {rule.marker_label} · {rule.enabled ? 'Aktywna' : 'Wyłączona'}</p>
                           </div>
                           <div className="panel__rule-actions">
-                            <button type="button" onClick={() => handleEditRule(rule)}>
+                            <Button variant="secondary" onClick={() => handleEditRule(rule)}>
                               Edytuj
-                            </button>
-                            <button
-                              type="button"
+                            </Button>
+                            <Button
+                              variant="destructive"
                               onClick={() => handleRuleDelete(rule)}
                               disabled={deletingRuleId === rule.rule_id}
                             >
                               {deletingRuleId === rule.rule_id ? 'Usuwanie…' : 'Usuń'}
-                            </button>
+                            </Button>
                           </div>
                         </li>
                       ))}
@@ -596,116 +602,126 @@ function App() {
               );
             })}
           </div>
-        </section>
+          </Card>
 
-        <section className="panel__card" aria-labelledby="document-history-title">
-          <h2 id="document-history-title">Historia dokumentów</h2>
-          {documents.length === 0 ? (
-            <p>Nie przesłano jeszcze dokumentów.</p>
-          ) : (
-            <ul className="panel__document-list">
-              {documents.map((document) => (
-                <li key={document.document_id}>
-                  <div>
-                    <strong>{document.original_filename || 'Dokument bez nazwy'}</strong>
-                    <p>{document.document_format.toUpperCase()} · {document.status}</p>
-                  </div>
-                  <button
-                    type="button"
-                    disabled={document.status !== 'ready' || downloadingDocumentId === document.document_id}
-                    onClick={() => handleDownload(document.document_id)}
-                  >
-                    {downloadingDocumentId === document.document_id ? 'Przygotowywanie…' : 'Pobierz wynik'}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
+          <div className="panel__support-grid">
+            <Card title="Historia dokumentów" titleId="document-history-title">
+              {documents.length === 0 ? (
+                <p>Nie przesłano jeszcze dokumentów.</p>
+              ) : (
+                <ul className="panel__document-list">
+                  {documents.map((document) => (
+                    <li key={document.document_id}>
+                      <div>
+                        <strong>{document.original_filename || 'Dokument bez nazwy'}</strong>
+                        <p>{document.document_format.toUpperCase()} · {document.status}</p>
+                      </div>
+                      <Button
+                        variant="secondary"
+                        disabled={document.status !== 'ready' || downloadingDocumentId === document.document_id}
+                        onClick={() => handleDownload(document.document_id)}
+                      >
+                        {downloadingDocumentId === document.document_id ? 'Przygotowywanie…' : 'Pobierz wynik'}
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Card>
 
-        <section className="panel__card" aria-labelledby="response-deanonymization-title">
-          <h2 id="response-deanonymization-title">Przywróć dane w odpowiedzi AI</h2>
-          <p>Wybierz zanonimizowany dokument z historii i wklej odpowiedź AI. Tekst nie zostanie zapisany.</p>
-          {readyDocuments.length === 0 ? (
-            <p>Nie masz jeszcze gotowego dokumentu do wyboru.</p>
-          ) : (
-            <form className="panel__deanonymization-form" onSubmit={handleDeanonymization}>
-              <label htmlFor="deanonymization-document">Dokument źródłowy</label>
-              <select
-                id="deanonymization-document"
-                value={selectedDeanonymizationDocumentId}
-                onChange={handleDeanonymizationDocumentChange}
-              >
-                <option value="">Wybierz dokument</option>
-                {readyDocuments.map((document) => (
-                  <option key={document.document_id} value={document.document_id}>
-                    {document.original_filename || 'Dokument bez nazwy'}
-                  </option>
-                ))}
-              </select>
+            <Card
+              description="Wybierz zanonimizowany dokument z historii i wklej odpowiedź AI. Tekst nie zostanie zapisany."
+              title="Przywróć dane w odpowiedzi AI"
+              titleId="response-deanonymization-title"
+            >
+              {readyDocuments.length === 0 ? (
+                <p>Nie masz jeszcze gotowego dokumentu do wyboru.</p>
+              ) : (
+                <form className="panel__deanonymization-form" onSubmit={handleDeanonymization}>
+                  <Field id="deanonymization-document" label="Dokument źródłowy">
+                    <select
+                      value={selectedDeanonymizationDocumentId}
+                      onChange={handleDeanonymizationDocumentChange}
+                    >
+                      <option value="">Wybierz dokument</option>
+                      {readyDocuments.map((document) => (
+                        <option key={document.document_id} value={document.document_id}>
+                          {document.original_filename || 'Dokument bez nazwy'}
+                        </option>
+                      ))}
+                    </select>
+                  </Field>
 
-              <label htmlFor="response-text">Odpowiedź AI</label>
-              <textarea
-                id="response-text"
-                value={responseText}
-                onChange={(event) => setResponseText(event.target.value)}
-                maxLength={50_000}
-                rows="8"
-                required
-              />
-              <p>{responseText.length} / 50 000 znaków</p>
+                  <Field id="response-text" label="Odpowiedź AI">
+                    <textarea
+                      value={responseText}
+                      onChange={(event) => setResponseText(event.target.value)}
+                      maxLength={50_000}
+                      rows="8"
+                      required
+                    />
+                  </Field>
+                  <p className="counter">{responseText.length} / 50 000 znaków</p>
 
-              <button type="submit" disabled={!selectedDeanonymizationDocumentId || isDeanonymizing}>
-                {isDeanonymizing ? 'Przywracanie…' : 'Przywróć dane'}
-              </button>
-            </form>
-          )}
-          {deanonymizationMessage && <p role={deanonymizationMessage.role}>{deanonymizationMessage.text}</p>}
-          {deanonymizedResponse && (
-            <div className="panel__deanonymization-result">
-              <h3>Wynik</h3>
-              <textarea value={deanonymizedResponse} readOnly rows="8" aria-label="Wynik deanonymizacji" />
-            </div>
-          )}
-        </section>
+                  <Button type="submit" disabled={!selectedDeanonymizationDocumentId || isDeanonymizing}>
+                    {isDeanonymizing ? 'Przywracanie…' : 'Przywróć dane'}
+                  </Button>
+                </form>
+              )}
+              {deanonymizationMessage && <p role={deanonymizationMessage.role}>{deanonymizationMessage.text}</p>}
+              {deanonymizedResponse && (
+                <div className="panel__deanonymization-result">
+                  <Field id="deanonymized-response" label="Wynik deanonymizacji">
+                    <textarea value={deanonymizedResponse} readOnly rows="8" />
+                  </Field>
+                </div>
+              )}
+            </Card>
+          </div>
+        </div>
       </main>
     );
   }
 
   return (
     <main className="panel">
-      <section className="panel__card panel__card--auth" aria-labelledby="auth-title">
-        <h1 id="auth-title">Panel Kancelarii</h1>
-        <p>{mode === 'sign-up' ? 'Utwórz konto kancelarii.' : 'Zaloguj się, aby przejść do panelu.'}</p>
+      <Card
+        className="panel__card--auth"
+        description={mode === 'sign-up' ? 'Utwórz konto kancelarii.' : 'Zaloguj się, aby przejść do panelu.'}
+        headingLevel="h1"
+        title="Panel Kancelarii"
+        titleId="auth-title"
+      >
 
         <form onSubmit={handleAuthentication}>
-          <label htmlFor="email">E-mail</label>
-          <input
-            id="email"
-            type="email"
-            autoComplete="email"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            required
-          />
+          <Field id="email" label="E-mail">
+            <input
+              type="email"
+              autoComplete="email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              required
+            />
+          </Field>
 
-          <label htmlFor="password">Hasło</label>
-          <input
-            id="password"
-            type="password"
-            autoComplete={mode === 'sign-up' ? 'new-password' : 'current-password'}
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            required
-          />
+          <Field id="password" label="Hasło">
+            <input
+              type="password"
+              autoComplete={mode === 'sign-up' ? 'new-password' : 'current-password'}
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              required
+            />
+          </Field>
 
-          <button type="submit" disabled={isSubmitting || !authClient}>
+          <Button type="submit" disabled={isSubmitting || !authClient}>
             {isSubmitting ? 'Proszę czekać…' : mode === 'sign-up' ? 'Zarejestruj się' : 'Zaloguj się'}
-          </button>
+          </Button>
         </form>
 
-        <button
+        <Button
           className="panel__link"
+          variant="secondary"
           type="button"
           onClick={() => {
             setMode(mode === 'sign-up' ? 'sign-in' : 'sign-up');
@@ -713,9 +729,9 @@ function App() {
           }}
         >
           {mode === 'sign-up' ? 'Mam już konto' : 'Utwórz konto'}
-        </button>
+        </Button>
         {authMessage && <p role="alert">{authMessage}</p>}
-      </section>
+      </Card>
     </main>
   );
 }
