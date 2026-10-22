@@ -147,6 +147,24 @@ def test_document_access_service_does_not_presign_non_ready_documents(monkeypatc
     assert fake_s3.presign_calls == []
 
 
+def test_document_access_service_does_not_presign_when_scoped_repository_finds_no_document(monkeypatch):
+    context = _context("00000000-0000-0000-0000-000000000002")
+    document_id = UUID("00000000-0000-0000-0000-000000000003")
+    fake_s3 = FakeS3Client()
+    monkeypatch.setattr(
+        document_service.document_repository,
+        "get_document_for_access_context",
+        lambda *_args: None,
+    )
+    service = DocumentAccessService(
+        session_factory=FakeSession,
+        storage=DocumentStorage(_settings(), client=fake_s3),
+    )
+
+    assert service.create_anonymized_download_url(context, document_id) is None
+    assert fake_s3.presign_calls == []
+
+
 def test_response_deanonymization_replaces_only_known_markers_for_the_selected_document(monkeypatch):
     context = _context("00000000-0000-0000-0000-000000000002")
     document = _document(

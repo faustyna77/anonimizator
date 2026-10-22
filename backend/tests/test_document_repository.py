@@ -7,6 +7,8 @@ from backend.app.auth import AccessContext
 from backend.app.document_repository import (
     create_processing_document,
     get_document_for_access_context,
+    list_documents_for_access_context,
+    mark_document_failed,
     mark_document_ready,
 )
 from backend.app.models import Office, Profile
@@ -72,3 +74,72 @@ def test_document_repository_filters_every_lookup_by_trusted_office(migrated_ses
         assert updated.original_filename == "first-office.pdf"
         assert updated.status == "ready"
         assert updated.encrypted_mapping == b"encrypted-test-mapping"
+
+
+@pytest.mark.postgresql
+def test_document_repository_leaves_a_foreign_documents_state_and_mapping_unchanged(
+    migrated_session_factory,
+):
+    with migrated_session_factory.begin() as session:
+        first_office = Office(name="First office")
+        second_office = Office(name="Second office")
+        first_profile = Profile(user_id="first-user", office=first_office)
+        second_profile = Profile(user_id="second-user", office=second_office)
+        session.add_all([first_profile, second_profile])
+        session.flush()
+        first_context = AccessContext(
+            user_id="first-user",
+            profile_id=first_profile.id,
+            office_id=first_office.id,
+        )
+        second_context = AccessContext(
+            user_id="second-user",
+            profile_id=second_profile.id,
+            office_id=second_office.id,
+        )
+        document = create_processing_document(
+            session,
+            first_context,
+            original_filename="first-office.pdf",
+            document_format="pdf",
+            size_bytes=42,
+            original_object_key=StorageObjectKey(f"offices/{first_office.id}/documents/{uuid4()}/original"),
+        )
+        document_id = document.id
+        original_result_key = StorageObjectKey(
+            f"offices/{first_office.id}/documents/{document_id}/anonymized"
+        )
+        original_mapping = b"encrypted-owner-mapping"
+        assert (
+            mark_document_ready(
+                session,
+                first_context,
+                document_id,
+                anonymized_object_key=original_result_key,
+                encrypted_mapping=original_mapping,
+            )
+            is not None
+        )
+
+        assert get_document_for_access_context(session, second_context, document_id) is None
+        assert list_documents_for_access_context(session, second_context) == []
+        assert (
+            mark_document_ready(
+                session,
+                second_context,
+                document_id,
+                anonymized_object_key=StorageObjectKey(
+                    f"offices/{second_office.id}/documents/{document_id}/anonymized"
+                ),
+                encrypted_mapping=b"foreign-replacement-mapping",
+            )
+            is None
+        )
+        assert mark_document_failed(session, second_context, document_id) is None
+
+        persisted_document = get_document_for_access_context(session, first_context, document_id)
+        assert persisted_document is not None
+        assert persisted_document.status == "ready"
+        assert persisted_document.original_filename == "first-office.pdf"
+        assert persisted_document.anonymized_object_key == original_result_key.value
+        assert persisted_document.encrypted_mapping == original_mapping
