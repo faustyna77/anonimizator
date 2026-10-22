@@ -4,12 +4,16 @@ from types import SimpleNamespace
 from uuid import UUID
 
 from docx import Document
+import pytest
 
 from backend.app import document_service
 from backend.app.auth import AccessContext
 from backend.app.config import Settings
 from backend.app.anonymization import DocumentAnonymizer, PhraseRule
+from backend.app.document_repository import get_document_for_access_context
 from backend.app.document_service import DocumentProcessingError, DocumentProcessingService
+from backend.app.models import Office, Profile
+from backend.app.office_rule_service import OfficeRuleInput, OfficeRuleService
 from backend.app.storage import DocumentMappingCipher, DocumentStorage
 
 
@@ -152,6 +156,71 @@ def test_service_loads_one_active_rule_snapshot_before_transforming_a_document(m
     assert Document(BytesIO(fake_s3.objects[result_key])).paragraphs[0].text == "[KLIENT_1] / [KLIENT_1]"
     assert json.loads(DocumentMappingCipher.from_settings(settings).decrypt(created[0].encrypted_mapping)) == {
         "[KLIENT_1]": "Jan Kowalski"
+    }
+
+
+@pytest.mark.postgresql
+def test_service_excludes_foreign_persisted_rules_from_document_artifact_and_mapping(
+    migrated_session_factory,
+):
+    settings = _settings()
+    fake_s3 = FakeS3Client()
+    with migrated_session_factory.begin() as session:
+        first_office = Office(name="First processing office")
+        second_office = Office(name="Second processing office")
+        first_profile = Profile(user_id="first-processing-user", office=first_office)
+        second_profile = Profile(user_id="second-processing-user", office=second_office)
+        session.add_all([first_profile, second_profile])
+        session.flush()
+        first_context = AccessContext("first-processing-user", first_profile.id, first_office.id)
+        second_context = AccessContext("second-processing-user", second_profile.id, second_office.id)
+
+    rule_service = OfficeRuleService(session_factory=migrated_session_factory)
+    rule_service.create_rule(
+        first_context,
+        OfficeRuleInput(
+            kind="phrase",
+            pattern="FIRST-OFFICE-SECRET",
+            marker_label="FIRST_SECRET",
+            enabled=True,
+        ),
+    )
+    rule_service.create_rule(
+        second_context,
+        OfficeRuleInput(
+            kind="phrase",
+            pattern="SECOND-OFFICE-SECRET",
+            marker_label="SECOND_SECRET",
+            enabled=True,
+        ),
+    )
+    cipher = DocumentMappingCipher.from_settings(settings)
+    service = DocumentProcessingService(
+        session_factory=migrated_session_factory,
+        storage=DocumentStorage(settings, client=fake_s3),
+        mapping_cipher=cipher,
+        office_rule_service=rule_service,
+    )
+
+    result = service.process_upload(
+        second_context,
+        content=_docx_bytes("FIRST-OFFICE-SECRET / SECOND-OFFICE-SECRET"),
+        original_filename="second-office.docx",
+        document_format="docx",
+        content_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    )
+
+    result_key = f"offices/{second_context.office_id}/documents/{result.document_id}/anonymized"
+    assert Document(BytesIO(fake_s3.objects[result_key])).paragraphs[0].text == (
+        "FIRST-OFFICE-SECRET / [SECOND_SECRET_1]"
+    )
+    with migrated_session_factory() as session:
+        persisted_document = get_document_for_access_context(session, second_context, result.document_id)
+
+    assert persisted_document is not None
+    assert persisted_document.encrypted_mapping is not None
+    assert json.loads(cipher.decrypt(persisted_document.encrypted_mapping)) == {
+        "[SECOND_SECRET_1]": "SECOND-OFFICE-SECRET"
     }
 
 

@@ -14,7 +14,7 @@ from backend.app.office_rule_repository import (
     list_office_rules_for_access_context,
     update_office_rule,
 )
-from backend.app.office_rule_service import OfficeRuleService
+from backend.app.office_rule_service import OfficeRuleInput, OfficeRuleService
 
 
 @pytest.mark.postgresql
@@ -129,6 +129,55 @@ def test_active_rule_snapshot_remains_usable_after_its_session_closes(migrated_s
     anonymizer = OfficeRuleService(session_factory=migrated_session_factory).create_active_anonymizer(access_context)
 
     assert anonymizer.anonymize("Jan Kowalski").text == "[KLIENT_1]"
+
+
+@pytest.mark.postgresql
+def test_active_rule_snapshot_excludes_foreign_and_disabled_rules(migrated_session_factory):
+    with migrated_session_factory.begin() as session:
+        first_office = Office(name="First snapshot office")
+        second_office = Office(name="Second snapshot office")
+        first_profile = Profile(user_id="first-snapshot-user", office=first_office)
+        second_profile = Profile(user_id="second-snapshot-user", office=second_office)
+        session.add_all([first_profile, second_profile])
+        session.flush()
+        first_context = AccessContext("first-snapshot-user", first_profile.id, first_office.id)
+        second_context = AccessContext("second-snapshot-user", second_profile.id, second_office.id)
+
+    service = OfficeRuleService(session_factory=migrated_session_factory)
+    service.create_rule(
+        first_context,
+        OfficeRuleInput(
+            kind="phrase",
+            pattern="FIRST-OFFICE-SECRET",
+            marker_label="FIRST_SECRET",
+            enabled=True,
+        ),
+    )
+    service.create_rule(
+        second_context,
+        OfficeRuleInput(
+            kind="phrase",
+            pattern="SECOND-OFFICE-SECRET",
+            marker_label="SECOND_SECRET",
+            enabled=True,
+        ),
+    )
+    service.create_rule(
+        second_context,
+        OfficeRuleInput(
+            kind="phrase",
+            pattern="SECOND-OFFICE-DISABLED",
+            marker_label="SECOND_DISABLED",
+            enabled=False,
+        ),
+    )
+
+    snapshot_result = service.create_active_anonymizer(second_context).anonymize(
+        "FIRST-OFFICE-SECRET / SECOND-OFFICE-SECRET / SECOND-OFFICE-DISABLED"
+    )
+
+    assert snapshot_result.text == "FIRST-OFFICE-SECRET / [SECOND_SECRET_1] / SECOND-OFFICE-DISABLED"
+    assert snapshot_result.mapping == {"[SECOND_SECRET_1]": "SECOND-OFFICE-SECRET"}
 
 
 @pytest.mark.postgresql

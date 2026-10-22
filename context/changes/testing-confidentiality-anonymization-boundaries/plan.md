@@ -224,25 +224,25 @@ Brak migracji produkcyjnych. Test fixture uruchamia istniejące migracje wyłąc
 
 #### Automated
 
-- [x] 1.1 Add two-office PostgreSQL document read and mutation isolation tests
-- [x] 1.2 Add real-service download and deanonymization denial tests
-- [x] 1.3 Run selected PostgreSQL integration tests against a `_test` database
+- [x] 1.1 Add two-office PostgreSQL document read and mutation isolation tests — 0608343
+- [x] 1.2 Add real-service download and deanonymization denial tests — 0608343
+- [x] 1.3 Run selected PostgreSQL integration tests against a `_test` database — 0608343
 
 #### Manual
 
-- [x] 1.4 Confirm the PostgreSQL target is an isolated `_test` database
+- [x] 1.4 Confirm the PostgreSQL target is an isolated `_test` database — 0608343
 
 ### Phase 2: Granica snapshotu reguł kancelarii
 
 #### Automated
 
-- [ ] 2.1 Add two-office active-rule snapshot isolation tests
-- [ ] 2.2 Add document processing coverage for foreign-rule absence in artifact and mapping
-- [ ] 2.3 Run rule snapshot integration tests with PostgreSQL and fake storage
+- [x] 2.1 Add two-office active-rule snapshot isolation tests
+- [x] 2.2 Add document processing coverage for foreign-rule absence in artifact and mapping
+- [x] 2.3 Run rule snapshot integration tests with PostgreSQL and fake storage
 
 #### Manual
 
-- [ ] 2.4 Confirm the scenario persists distinct rules rather than faking ownership
+- [x] 2.4 Confirm the scenario persists distinct rules rather than faking ownership
 
 ### Phase 3: Pełny przepływ PII przez format i mapowanie
 
