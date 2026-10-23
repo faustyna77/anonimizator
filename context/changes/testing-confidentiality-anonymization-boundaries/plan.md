@@ -248,22 +248,22 @@ Brak migracji produkcyjnych. Test fixture uruchamia istniejące migracje wyłąc
 
 #### Automated
 
-- [x] 3.1 Add an independent five-type PII manifest with variants and near-misses
-- [x] 3.2 Add parameterized PDF/DOCX artifact, mapping, and owner-restoration tests
-- [x] 3.3 Add unit coverage for marker reuse and invalid-value mapping absence
+- [x] 3.1 Add an independent five-type PII manifest with variants and near-misses — 31b2f19
+- [x] 3.2 Add parameterized PDF/DOCX artifact, mapping, and owner-restoration tests — 31b2f19
+- [x] 3.3 Add unit coverage for marker reuse and invalid-value mapping absence — 31b2f19
 
 #### Manual
 
-- [x] 3.4 Confirm expected values are independent of production rules
+- [x] 3.4 Confirm expected values are independent of production rules — 31b2f19
 
 ### Phase 4: Bramka regresji i cookbook
 
 #### Automated
 
-- [ ] 4.1 Document and run the backend regression commands with separated PostgreSQL configuration
-- [ ] 4.2 Update the test-plan cookbook with shipped backend test patterns
-- [ ] 4.3 Verify no new test path uses real external services
+- [x] 4.1 Document and run the backend regression commands with separated PostgreSQL configuration
+- [x] 4.2 Update the test-plan cookbook with shipped backend test patterns
+- [x] 4.3 Verify no new test path uses real external services
 
 #### Manual
 
-- [ ] 4.4 Confirm the cookbook is sufficient for the next backend boundary test
+- [x] 4.4 Confirm the cookbook is sufficient for the next backend boundary test
