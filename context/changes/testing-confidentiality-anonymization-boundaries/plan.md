@@ -260,10 +260,10 @@ Brak migracji produkcyjnych. Test fixture uruchamia istniejące migracje wyłąc
 
 #### Automated
 
-- [x] 4.1 Document and run the backend regression commands with separated PostgreSQL configuration
-- [x] 4.2 Update the test-plan cookbook with shipped backend test patterns
-- [x] 4.3 Verify no new test path uses real external services
+- [x] 4.1 Document and run the backend regression commands with separated PostgreSQL configuration — fc1f445
+- [x] 4.2 Update the test-plan cookbook with shipped backend test patterns — fc1f445
+- [x] 4.3 Verify no new test path uses real external services — fc1f445
 
 #### Manual
 
-- [x] 4.4 Confirm the cookbook is sufficient for the next backend boundary test
+- [x] 4.4 Confirm the cookbook is sufficient for the next backend boundary test — fc1f445

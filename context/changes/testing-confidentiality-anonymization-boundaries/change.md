@@ -1,9 +1,9 @@
 ---
 change_id: testing-confidentiality-anonymization-boundaries
 title: Test confidentiality and anonymization boundaries
-status: implementing
+status: implemented
 created: 2026-10-19
-updated: 2026-10-19
+updated: 2026-10-23
 archived_at: null
 ---
 

@@ -48,7 +48,7 @@ Each row is a discrete rollout phase. Status values are maintained from artifact
 
 | # | Phase name | Goal (one line) | Risks covered | Test types | Status | Change folder |
 |---|---|---|---|---|---|---|
-| 1 | Confidentiality and anonymization boundaries | Prove office isolation and supported PII replacement under realistic failures. | #1, #2 | unit + integration | planned | context/changes/testing-confidentiality-anonymization-boundaries/ |
+| 1 | Confidentiality and anonymization boundaries | Prove office isolation and supported PII replacement under realistic failures. | #1, #2 | unit + integration | complete | context/changes/testing-confidentiality-anonymization-boundaries/ |
 | 2 | Extension and document integration | Prove browser-to-API behavior, unsafe input handling, and safe AI handoff. | #3, #4 | integration + browser smoke | not started | — |
 | 3 | Panel and response safety | Prove API/CORS failure handling and safe deanonymization edge outcomes. | #5, #6 | contract + unit + browser smoke | not started | — |
 | 4 | Quality-gates wiring | Make the established risk tests repeatable before delivery. | cross-cutting | gates | not started | — |
