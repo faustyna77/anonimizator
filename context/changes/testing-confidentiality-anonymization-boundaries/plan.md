@@ -236,25 +236,25 @@ Brak migracji produkcyjnych. Test fixture uruchamia istniejące migracje wyłąc
 
 #### Automated
 
-- [x] 2.1 Add two-office active-rule snapshot isolation tests
-- [x] 2.2 Add document processing coverage for foreign-rule absence in artifact and mapping
-- [x] 2.3 Run rule snapshot integration tests with PostgreSQL and fake storage
+- [x] 2.1 Add two-office active-rule snapshot isolation tests — 40a6d20
+- [x] 2.2 Add document processing coverage for foreign-rule absence in artifact and mapping — 40a6d20
+- [x] 2.3 Run rule snapshot integration tests with PostgreSQL and fake storage — 40a6d20
 
 #### Manual
 
-- [x] 2.4 Confirm the scenario persists distinct rules rather than faking ownership
+- [x] 2.4 Confirm the scenario persists distinct rules rather than faking ownership — 40a6d20
 
 ### Phase 3: Pełny przepływ PII przez format i mapowanie
 
 #### Automated
 
-- [ ] 3.1 Add an independent five-type PII manifest with variants and near-misses
-- [ ] 3.2 Add parameterized PDF/DOCX artifact, mapping, and owner-restoration tests
-- [ ] 3.3 Add unit coverage for marker reuse and invalid-value mapping absence
+- [x] 3.1 Add an independent five-type PII manifest with variants and near-misses
+- [x] 3.2 Add parameterized PDF/DOCX artifact, mapping, and owner-restoration tests
+- [x] 3.3 Add unit coverage for marker reuse and invalid-value mapping absence
 
 #### Manual
 
-- [ ] 3.4 Confirm expected values are independent of production rules
+- [x] 3.4 Confirm expected values are independent of production rules
 
 ### Phase 4: Bramka regresji i cookbook
 

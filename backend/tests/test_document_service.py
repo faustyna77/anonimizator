@@ -11,10 +11,26 @@ from backend.app.auth import AccessContext
 from backend.app.config import Settings
 from backend.app.anonymization import DocumentAnonymizer, PhraseRule
 from backend.app.document_repository import get_document_for_access_context
-from backend.app.document_service import DocumentProcessingError, DocumentProcessingService
+from backend.app.document_service import (
+    DocumentProcessingError,
+    DocumentProcessingService,
+    ResponseDeanonymizationService,
+)
 from backend.app.models import Office, Profile
 from backend.app.office_rule_service import OfficeRuleInput, OfficeRuleService
 from backend.app.storage import DocumentMappingCipher, DocumentStorage
+from backend.tests.pii_manifest import (
+    CONTROLLED_NEAR_MISSES,
+    EXPECTED_MAPPING,
+    EXPECTED_MARKERS,
+    EXPECTED_RESTORED_RESPONSE,
+    KNOWN_MARKER_RESPONSE,
+    SOURCE_PII_VALUES,
+    make_pii_docx,
+    make_pii_pdf,
+    read_docx_text,
+    read_pdf_text,
+)
 
 
 class FakeS3Client:
@@ -222,6 +238,85 @@ def test_service_excludes_foreign_persisted_rules_from_document_artifact_and_map
     assert json.loads(cipher.decrypt(persisted_document.encrypted_mapping)) == {
         "[SECOND_SECRET_1]": "SECOND-OFFICE-SECRET"
     }
+
+
+@pytest.mark.parametrize(
+    ("document_format", "content_type", "source_factory", "text_reader"),
+    (
+        pytest.param(
+            "docx",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            make_pii_docx,
+            read_docx_text,
+            id="docx",
+        ),
+        pytest.param("pdf", "application/pdf", make_pii_pdf, read_pdf_text, id="pdf"),
+    ),
+)
+def test_service_processes_each_real_format_through_encrypted_mapping_and_owner_restoration(
+    monkeypatch,
+    document_format,
+    content_type,
+    source_factory,
+    text_reader,
+):
+    fake_s3 = FakeS3Client()
+    settings = _settings()
+    context = _context()
+    created = []
+
+    def create_processing(session, context, **kwargs):
+        document = SimpleNamespace(id=kwargs["document_id"], status="processing", **kwargs)
+        created.append(document)
+        return document
+
+    def mark_ready(session, context, document_id, **kwargs):
+        document = created[0]
+        document.status = "ready"
+        document.anonymized_object_key = kwargs["anonymized_object_key"].value
+        document.encrypted_mapping = kwargs["encrypted_mapping"]
+        return document
+
+    monkeypatch.setattr(document_service.document_repository, "create_processing_document", create_processing)
+    monkeypatch.setattr(document_service.document_repository, "mark_document_ready", mark_ready)
+    cipher = DocumentMappingCipher.from_settings(settings)
+    service = DocumentProcessingService(
+        session_factory=FakeSession,
+        storage=DocumentStorage(settings, client=fake_s3),
+        mapping_cipher=cipher,
+        office_rule_service=FakeRuleSnapshotService(DocumentAnonymizer()),
+    )
+
+    result = service.process_upload(
+        context,
+        content=source_factory(),
+        original_filename=f"synthetic.{document_format}",
+        document_format=document_format,
+        content_type=content_type,
+    )
+
+    result_key = f"offices/{context.office_id}/documents/{result.document_id}/anonymized"
+    artifact_text = text_reader(fake_s3.objects[result_key])
+    serialized_mapping = json.dumps(EXPECTED_MAPPING, sort_keys=True, separators=(",", ":")).encode("utf-8")
+
+    assert all(marker in artifact_text for marker in EXPECTED_MARKERS)
+    assert not any(value in artifact_text for value in SOURCE_PII_VALUES)
+    assert all(near_miss in artifact_text for near_miss in CONTROLLED_NEAR_MISSES)
+    assert created[0].encrypted_mapping != serialized_mapping
+    assert json.loads(cipher.decrypt(created[0].encrypted_mapping)) == EXPECTED_MAPPING
+
+    monkeypatch.setattr(
+        document_service.document_repository,
+        "get_document_for_access_context",
+        lambda _session, requested_context, document_id: (
+            created[0] if requested_context == context and document_id == result.document_id else None
+        ),
+    )
+    restoration_service = ResponseDeanonymizationService(session_factory=FakeSession, mapping_cipher=cipher)
+
+    assert restoration_service.deanonymize_response(context, result.document_id, KNOWN_MARKER_RESPONSE) == (
+        EXPECTED_RESTORED_RESPONSE
+    )
 
 
 def test_service_persists_synthetic_original_result_and_encrypted_mapping_with_fake_s3(monkeypatch):

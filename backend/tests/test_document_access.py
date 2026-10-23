@@ -8,6 +8,11 @@ from backend.app.auth import AccessContext
 from backend.app.config import Settings
 from backend.app.document_service import DocumentAccessService, ResponseDeanonymizationService
 from backend.app.storage import DocumentMappingCipher, DocumentStorage
+from backend.tests.pii_manifest import (
+    EXPECTED_MAPPING,
+    EXPECTED_RESTORED_RESPONSE,
+    KNOWN_MARKER_RESPONSE,
+)
 
 
 class FakeS3Client:
@@ -165,14 +170,14 @@ def test_document_access_service_does_not_presign_when_scoped_repository_finds_n
     assert fake_s3.presign_calls == []
 
 
-def test_response_deanonymization_replaces_only_known_markers_for_the_selected_document(monkeypatch):
+def test_response_deanonymization_restores_all_manifest_markers_and_leaves_unknown_markers(monkeypatch):
     context = _context("00000000-0000-0000-0000-000000000002")
     document = _document(
         "00000000-0000-0000-0000-000000000003", str(context.office_id)
     )
     cipher = DocumentMappingCipher.from_settings(_settings())
     document.encrypted_mapping = cipher.encrypt(
-        json.dumps({"[KLIENT_1]": "Jan Kowalski"}, sort_keys=True).encode("utf-8")
+        json.dumps(EXPECTED_MAPPING, sort_keys=True).encode("utf-8")
     )
     monkeypatch.setattr(
         document_service.document_repository,
@@ -186,10 +191,10 @@ def test_response_deanonymization_replaces_only_known_markers_for_the_selected_d
     result = service.deanonymize_response(
         context,
         document.id,
-        "Odpowiedź dla [KLIENT_1] oraz [NIEZNANY_1].",
+        KNOWN_MARKER_RESPONSE,
     )
 
-    assert result == "Odpowiedź dla Jan Kowalski oraz [NIEZNANY_1]."
+    assert result == EXPECTED_RESTORED_RESPONSE
 
 
 def test_response_deanonymization_rejects_a_mapping_with_non_marker_keys(monkeypatch):

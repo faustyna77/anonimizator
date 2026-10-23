@@ -1,44 +1,42 @@
 from backend.app.anonymization import DocumentAnonymizer
-
-
-SYNTHETIC_IDENTIFIERS = (
-    "PESEL 44051401458; NIP 8567346215; e-mail synthetic.person@example.test; "
-    "telefon +48 123 456 789; IBAN PL61 1090 1014 0000 0712 1981 2874."
+from backend.tests.pii_manifest import (
+    CONTROLLED_NEAR_MISSES,
+    EXPECTED_ANONYMIZED_DOCUMENT_TEXT,
+    EXPECTED_MAPPING,
+    EXPECTED_MARKERS,
+    PII_DOCUMENT_TEXT,
+    PII_MANIFEST,
 )
 
 
-def test_anonymizer_replaces_all_supported_identifiers_with_type_specific_markers():
-    result = DocumentAnonymizer().anonymize(SYNTHETIC_IDENTIFIERS)
-
-    assert result.text == (
-        "PESEL [PESEL_1]; NIP [NIP_1]; e-mail [EMAIL_1]; "
-        "telefon [TELEFON_1]; IBAN [IBAN_1]."
-    )
-    assert result.mapping == {
-        "[PESEL_1]": "44051401458",
-        "[NIP_1]": "8567346215",
-        "[EMAIL_1]": "synthetic.person@example.test",
-        "[TELEFON_1]": "+48 123 456 789",
-        "[IBAN_1]": "PL61 1090 1014 0000 0712 1981 2874",
-    }
+def test_pii_manifest_declares_five_types_variants_and_controlled_near_misses():
+    assert tuple(entry.name for entry in PII_MANIFEST) == ("PESEL", "NIP", "EMAIL", "TELEFON", "IBAN")
+    assert tuple(entry.marker for entry in PII_MANIFEST) == EXPECTED_MARKERS
+    assert tuple(entry.first_spelling for entry in PII_MANIFEST) == tuple(EXPECTED_MAPPING.values())
+    assert tuple(entry.near_miss for entry in PII_MANIFEST) == CONTROLLED_NEAR_MISSES
+    assert any(entry.first_spelling != entry.canonical_variant for entry in PII_MANIFEST)
 
 
-def test_anonymizer_reuses_markers_inside_one_document_and_restarts_for_another_document():
-    first = DocumentAnonymizer()
-    repeated = first.anonymize("44051401458 then 44051401458 and 8567346215")
-    second = DocumentAnonymizer().anonymize("44051401458")
+def test_anonymizer_matches_the_independent_five_type_pii_manifest():
+    result = DocumentAnonymizer().anonymize(PII_DOCUMENT_TEXT)
 
-    assert repeated.text == "[PESEL_1] then [PESEL_1] and [NIP_1]"
-    assert repeated.mapping == {
-        "[PESEL_1]": "44051401458",
-        "[NIP_1]": "8567346215",
-    }
-    assert second.text == "[PESEL_1]"
-    assert second.mapping == {"[PESEL_1]": "44051401458"}
+    assert result.text == EXPECTED_ANONYMIZED_DOCUMENT_TEXT
+    assert result.mapping == EXPECTED_MAPPING
 
 
-def test_anonymizer_leaves_identifiers_with_invalid_checksums_unchanged():
-    text = "PESEL 44051401459, NIP 8567346214, IBAN PL61 1090 1014 0000 0712 1981 2875"
+def test_anonymizer_reuses_manifest_markers_for_canonical_variants():
+    result = DocumentAnonymizer().anonymize(PII_DOCUMENT_TEXT)
+
+    assert result.text.count("[PESEL_1]") == 2
+    assert result.text.count("[NIP_1]") == 2
+    assert result.text.count("[EMAIL_1]") == 2
+    assert result.text.count("[TELEFON_1]") == 2
+    assert result.text.count("[IBAN_1]") == 2
+    assert result.mapping == EXPECTED_MAPPING
+
+
+def test_anonymizer_leaves_manifest_near_misses_out_of_the_mapping():
+    text = "\n".join(CONTROLLED_NEAR_MISSES)
 
     result = DocumentAnonymizer().anonymize(text)
 

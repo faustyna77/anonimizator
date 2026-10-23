@@ -2,9 +2,20 @@ from io import BytesIO
 
 import pymupdf
 from docx import Document
+import pytest
 
 from backend.app.anonymization import CustomRegexRule, DocumentAnonymizer, PhraseRule
 from backend.app.document_formats import DocumentProcessingError, anonymize_docx, anonymize_pdf
+from backend.tests.pii_manifest import (
+    CONTROLLED_NEAR_MISSES,
+    EXPECTED_MAPPING,
+    EXPECTED_MARKERS,
+    SOURCE_PII_VALUES,
+    make_pii_docx,
+    make_pii_pdf,
+    read_docx_text,
+    read_pdf_text,
+)
 
 
 SYNTHETIC_IDENTIFIERS = (
@@ -148,6 +159,27 @@ def test_pdf_anonymization_redacts_in_place_and_preserves_pages_layout_and_stati
     assert not any(identifier in text for identifier in SOURCE_IDENTIFIERS)
     assert not any(identifier.encode("utf-8") in output for identifier in SOURCE_IDENTIFIERS)
     assert set(mapping) == {"[PESEL_1]", "[NIP_1]", "[EMAIL_1]", "[TELEFON_1]", "[IBAN_1]"}
+
+
+@pytest.mark.parametrize(
+    ("source_factory", "anonymize", "text_reader"),
+    (
+        pytest.param(make_pii_docx, anonymize_docx, read_docx_text, id="docx"),
+        pytest.param(make_pii_pdf, anonymize_pdf, read_pdf_text, id="pdf"),
+    ),
+)
+def test_real_format_adapters_match_the_independent_pii_manifest(
+    source_factory,
+    anonymize,
+    text_reader,
+):
+    output, mapping = anonymize(source_factory(), DocumentAnonymizer())
+    text = text_reader(output)
+
+    assert all(marker in text for marker in EXPECTED_MARKERS)
+    assert not any(value in text for value in SOURCE_PII_VALUES)
+    assert all(near_miss in text for near_miss in CONTROLLED_NEAR_MISSES)
+    assert mapping == EXPECTED_MAPPING
 
 
 def test_pdf_without_text_layer_returns_a_controlled_ocr_error():
