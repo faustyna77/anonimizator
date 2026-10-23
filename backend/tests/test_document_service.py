@@ -240,6 +240,7 @@ def test_service_excludes_foreign_persisted_rules_from_document_artifact_and_map
     }
 
 
+@pytest.mark.postgresql
 @pytest.mark.parametrize(
     ("document_format", "content_type", "source_factory", "text_reader"),
     (
@@ -254,7 +255,7 @@ def test_service_excludes_foreign_persisted_rules_from_document_artifact_and_map
     ),
 )
 def test_service_processes_each_real_format_through_encrypted_mapping_and_owner_restoration(
-    monkeypatch,
+    migrated_session_factory,
     document_format,
     content_type,
     source_factory,
@@ -262,61 +263,54 @@ def test_service_processes_each_real_format_through_encrypted_mapping_and_owner_
 ):
     fake_s3 = FakeS3Client()
     settings = _settings()
-    context = _context()
-    created = []
+    with migrated_session_factory.begin() as session:
+        first_office = Office(name=f"First {document_format} format office")
+        second_office = Office(name=f"Second {document_format} format office")
+        first_profile = Profile(user_id=f"first-{document_format}-format-user", office=first_office)
+        second_profile = Profile(user_id=f"second-{document_format}-format-user", office=second_office)
+        session.add_all([first_profile, second_profile])
+        session.flush()
+        first_context = AccessContext(first_profile.user_id, first_profile.id, first_office.id)
+        second_context = AccessContext(second_profile.user_id, second_profile.id, second_office.id)
 
-    def create_processing(session, context, **kwargs):
-        document = SimpleNamespace(id=kwargs["document_id"], status="processing", **kwargs)
-        created.append(document)
-        return document
-
-    def mark_ready(session, context, document_id, **kwargs):
-        document = created[0]
-        document.status = "ready"
-        document.anonymized_object_key = kwargs["anonymized_object_key"].value
-        document.encrypted_mapping = kwargs["encrypted_mapping"]
-        return document
-
-    monkeypatch.setattr(document_service.document_repository, "create_processing_document", create_processing)
-    monkeypatch.setattr(document_service.document_repository, "mark_document_ready", mark_ready)
     cipher = DocumentMappingCipher.from_settings(settings)
     service = DocumentProcessingService(
-        session_factory=FakeSession,
+        session_factory=migrated_session_factory,
         storage=DocumentStorage(settings, client=fake_s3),
         mapping_cipher=cipher,
-        office_rule_service=FakeRuleSnapshotService(DocumentAnonymizer()),
+        office_rule_service=OfficeRuleService(session_factory=migrated_session_factory),
     )
 
     result = service.process_upload(
-        context,
+        first_context,
         content=source_factory(),
         original_filename=f"synthetic.{document_format}",
         document_format=document_format,
         content_type=content_type,
     )
 
-    result_key = f"offices/{context.office_id}/documents/{result.document_id}/anonymized"
+    result_key = f"offices/{first_context.office_id}/documents/{result.document_id}/anonymized"
     artifact_text = text_reader(fake_s3.objects[result_key])
     serialized_mapping = json.dumps(EXPECTED_MAPPING, sort_keys=True, separators=(",", ":")).encode("utf-8")
 
     assert all(marker in artifact_text for marker in EXPECTED_MARKERS)
     assert not any(value in artifact_text for value in SOURCE_PII_VALUES)
     assert all(near_miss in artifact_text for near_miss in CONTROLLED_NEAR_MISSES)
-    assert created[0].encrypted_mapping != serialized_mapping
-    assert json.loads(cipher.decrypt(created[0].encrypted_mapping)) == EXPECTED_MAPPING
+    with migrated_session_factory() as session:
+        persisted_document = get_document_for_access_context(session, first_context, result.document_id)
+        foreign_document = get_document_for_access_context(session, second_context, result.document_id)
 
-    monkeypatch.setattr(
-        document_service.document_repository,
-        "get_document_for_access_context",
-        lambda _session, requested_context, document_id: (
-            created[0] if requested_context == context and document_id == result.document_id else None
-        ),
-    )
-    restoration_service = ResponseDeanonymizationService(session_factory=FakeSession, mapping_cipher=cipher)
+    assert persisted_document is not None
+    assert persisted_document.encrypted_mapping != serialized_mapping
+    assert json.loads(cipher.decrypt(persisted_document.encrypted_mapping)) == EXPECTED_MAPPING
+    assert foreign_document is None
 
-    assert restoration_service.deanonymize_response(context, result.document_id, KNOWN_MARKER_RESPONSE) == (
+    restoration_service = ResponseDeanonymizationService(session_factory=migrated_session_factory, mapping_cipher=cipher)
+
+    assert restoration_service.deanonymize_response(first_context, result.document_id, KNOWN_MARKER_RESPONSE) == (
         EXPECTED_RESTORED_RESPONSE
     )
+    assert restoration_service.deanonymize_response(second_context, result.document_id, KNOWN_MARKER_RESPONSE) is None
 
 
 def test_service_persists_synthetic_original_result_and_encrypted_mapping_with_fake_s3(monkeypatch):

@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 from alembic import command
 from alembic.config import Config
+from sqlalchemy.engine import make_url
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 
@@ -24,6 +25,8 @@ def _require_test_database_url() -> str:
     assert database_url is not None
     if not database_url.startswith(("postgresql://", "postgresql+psycopg://")):
         pytest.fail("TEST_DATABASE_URL must point to PostgreSQL")
+    if make_url(database_url).host not in {"127.0.0.1", "localhost", "::1"}:
+        pytest.fail("TEST_DATABASE_URL must point to a loopback PostgreSQL host")
     if not database_url.rsplit("/", maxsplit=1)[-1].split("?", maxsplit=1)[0].endswith("_test"):
         pytest.fail("TEST_DATABASE_URL must use a database whose name ends in _test")
     return database_url

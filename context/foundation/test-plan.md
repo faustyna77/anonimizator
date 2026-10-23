@@ -90,7 +90,7 @@ How to add new tests in this project. Each sub-section is filled in when its rol
 
 Start from the protected behavior, not a production helper or regular expression. For an office-boundary test, persist two distinct offices through `migrated_session_factory`, create the owner record under office A, and assert both the owner success path and the office-B denial path. Re-read the owner record after the denial attempt when testing mutations.
 
-Use fake storage and the controlled auth provider for document services; no backend test in this pattern contacts S3, Supabase, Fly, or a production database. PostgreSQL-marked tests require an explicitly supplied local/test `TEST_DATABASE_URL` whose database name ends with `_test`; the shared fixture applies migrations and truncates its test tables before and after each test.
+Use fake storage and the controlled auth provider for document services; no backend test in this pattern contacts S3, Supabase, Fly, or a production database. PostgreSQL-marked tests require an explicitly supplied loopback `TEST_DATABASE_URL` whose database name ends with `_test`; the shared fixture rejects every non-loopback host before applying migrations or truncating its test tables.
 
 For PII and document-format coverage, declare source values, expected markers, canonical variants, and near-misses in `backend/tests/pii_manifest.py`. Do not import `_RULES` or validators from application code. Reuse the manifest for both real PDF and DOCX factories, assert that the artifact contains markers but not source values, inspect the decrypted mapping, and prove authorized restoration while preserving an unknown marker unchanged.
 
