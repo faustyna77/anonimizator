@@ -8,11 +8,6 @@ from backend.app.auth import AccessContext
 from backend.app.config import Settings
 from backend.app.document_service import DocumentAccessService, ResponseDeanonymizationService
 from backend.app.storage import DocumentMappingCipher, DocumentStorage
-from backend.tests.pii_manifest import (
-    EXPECTED_MAPPING,
-    EXPECTED_RESTORED_RESPONSE,
-    KNOWN_MARKER_RESPONSE,
-)
 
 
 class FakeS3Client:
@@ -170,14 +165,14 @@ def test_document_access_service_does_not_presign_when_scoped_repository_finds_n
     assert fake_s3.presign_calls == []
 
 
-def test_response_deanonymization_restores_all_manifest_markers_and_leaves_unknown_markers(monkeypatch):
+def test_response_deanonymization_restores_only_isolated_known_markers(monkeypatch):
     context = _context("00000000-0000-0000-0000-000000000002")
     document = _document(
         "00000000-0000-0000-0000-000000000003", str(context.office_id)
     )
     cipher = DocumentMappingCipher.from_settings(_settings())
     document.encrypted_mapping = cipher.encrypt(
-        json.dumps(EXPECTED_MAPPING, sort_keys=True).encode("utf-8")
+        json.dumps({"[KLIENT_1]": "synthetic-client"}, sort_keys=True).encode("utf-8")
     )
     monkeypatch.setattr(
         document_service.document_repository,
@@ -191,10 +186,16 @@ def test_response_deanonymization_restores_all_manifest_markers_and_leaves_unkno
     result = service.deanonymize_response(
         context,
         document.id,
-        KNOWN_MARKER_RESPONSE,
+        "Known [KLIENT_1]; unknown [NIEZNANY_1]; altered [KLIENT_2]; "
+        "prefix[KLIENT_1] and [KLIENT_1]suffix; punctuation ([KLIENT_1]). "
+        "bracketed [[KLIENT_1]].",
     )
 
-    assert result == EXPECTED_RESTORED_RESPONSE
+    assert result == (
+        "Known synthetic-client; unknown [NIEZNANY_1]; altered [KLIENT_2]; "
+        "prefix[KLIENT_1] and [KLIENT_1]suffix; punctuation (synthetic-client). "
+        "bracketed [[KLIENT_1]]."
+    )
 
 
 def test_response_deanonymization_rejects_a_mapping_with_non_marker_keys(monkeypatch):
@@ -204,7 +205,7 @@ def test_response_deanonymization_rejects_a_mapping_with_non_marker_keys(monkeyp
     )
     cipher = DocumentMappingCipher.from_settings(_settings())
     document.encrypted_mapping = cipher.encrypt(
-        json.dumps({"not-a-marker": "Jan Kowalski"}, sort_keys=True).encode("utf-8")
+        json.dumps({"not-a-marker": "synthetic-value"}, sort_keys=True).encode("utf-8")
     )
     monkeypatch.setattr(
         document_service.document_repository,
@@ -243,6 +244,7 @@ def test_response_deanonymization_returns_none_for_all_unavailable_mapping_state
         b"not-a-fernet-token",
         cipher.encrypt(b"\xff"),
         cipher.encrypt(b"[]"),
+        cipher.encrypt(json.dumps({"[KLIENT_1]": ""}).encode("utf-8")),
     ):
         document.encrypted_mapping = encrypted_mapping
         assert service.deanonymize_response(context, document.id, "[KLIENT_1]") is None

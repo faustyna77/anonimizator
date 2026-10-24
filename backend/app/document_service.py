@@ -182,7 +182,8 @@ class ResponseDeanonymizationService:
             if not mapping:
                 return None
             marker_pattern = "|".join(re.escape(marker) for marker in sorted(mapping, key=len, reverse=True))
-            return re.sub(marker_pattern, lambda match: mapping[match.group(0)], response_text)
+            isolated_marker_pattern = rf"(?<![\w\[\]])(?:{marker_pattern})(?![\w\[\]])"
+            return re.sub(isolated_marker_pattern, lambda match: mapping[match.group(0)], response_text)
         finally:
             session.close()
 
@@ -196,6 +197,7 @@ class ResponseDeanonymizationService:
             isinstance(marker, str)
             and _MARKER_KEY.fullmatch(marker)
             and isinstance(value, str)
+            and value
             for marker, value in mapping.items()
         ):
             return None
