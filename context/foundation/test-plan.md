@@ -49,9 +49,11 @@ Each row is a discrete rollout phase. Status values are maintained from artifact
 | # | Phase name | Goal (one line) | Risks covered | Test types | Status | Change folder |
 |---|---|---|---|---|---|---|
 | 1 | Confidentiality and anonymization boundaries | Prove office isolation and supported PII replacement under realistic failures. | #1, #2 | unit + integration | complete | context/changes/testing-confidentiality-anonymization-boundaries/ |
-| 2 | Extension and document integration | Prove browser-to-API behavior, unsafe input handling, and safe AI handoff. | #3, #4 | integration + browser smoke | not started | — |
+| 2 | Extension and document integration | Prove browser-to-API behavior, unsafe input handling, and safe AI handoff. | #3, #4 | integration + browser smoke | complete | context/changes/chrome-ai-anonymization/ |
 | 3 | Panel and response safety | Prove API/CORS failure handling and safe deanonymization edge outcomes. | #5, #6 | contract + unit + browser smoke | complete | context/changes/testing-panel-response-safety/ |
-| 4 | Quality-gates wiring | Make the established risk tests repeatable before delivery. | cross-cutting | gates | not started | — |
+| 4 | Quality-gates wiring | Make the established risk tests repeatable before delivery. | cross-cutting | gates | complete | — |
+
+> Phase 4 was consciously skipped on 2026-10-25: the existing pytest, frontend, and Chrome-extension gates are accepted as sufficient for this MVP.
 
 ## 4. Stack
 
@@ -96,7 +98,9 @@ For PII and document-format coverage, declare source values, expected markers, c
 
 ### 6.2 Adding an extension integration test
 
-TBD — see §3 Phase 2 for browser-to-API, token, and safe AI-handoff patterns.
+Keep the browser boundary deterministic: mock Chrome storage/download APIs and `fetch`, then exercise the service-worker handler with a synthetic `File`. Assert the upload uses exactly one multipart `file` and a Bearer token, with no `office_id`, document metadata, or manually set `Content-Type`.
+
+For every safe failure state (401, 403, 404, 409, 422, network failure), assert the returned code and that `chrome.downloads.download` was not called. Test the handoff separately: after a successful authorized result response, the only download destination is the returned anonymized URL. Run the extension gate with `cd chrome-extension && npm test`; manual browser smoke uses a synthetic file and never exposes tokens or document content in popup state or logs.
 
 ### 6.3 Adding a panel/API contract test
 
@@ -125,6 +129,7 @@ Remove the named Docker container immediately after the gate. Never record a dat
 ### 6.6 Per-rollout-phase notes
 
 - Confidentiality and anonymization boundaries: persist two offices for repository/service isolation, test office-scoped rule snapshots, and use an independent five-type PII manifest for the real PDF/DOCX → encrypted mapping → owner-restoration flow. The integration database is a disposable local PostgreSQL container; external storage and auth remain controlled fakes.
+- Extension and document integration: mock the Chrome and HTTP boundaries with synthetic `File` payloads, verify one file-only multipart request and Bearer authorization, and prove every failed upload/result path leaves Chrome downloads untouched. Manual smoke covers the restricted local AI origin with a synthetic document only.
 
 ## 7. What We Deliberately Don't Test
 
