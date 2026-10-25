@@ -1,9 +1,9 @@
 ---
 change_id: testing-panel-response-safety
 title: Test panel and response safety
-status: implementing
+status: implemented
 created: 2026-10-23
-updated: 2026-10-24
+updated: 2026-10-25
 archived_at: null
 ---
 

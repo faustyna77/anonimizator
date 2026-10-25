@@ -219,23 +219,23 @@ Brak migracji. Historyczne mappingi z pustymi wartościami stają się bezpieczn
 
 #### Automated
 
-- [x] 2.1 Add deanonymization POST CORS contract coverage
-- [x] 2.2 Validate deanonymization success payloads in the frontend client
-- [x] 2.3 Add frontend regressions and run frontend quality gates
+- [x] 2.1 Add deanonymization POST CORS contract coverage — 19e740d
+- [x] 2.2 Validate deanonymization success payloads in the frontend client — 19e740d
+- [x] 2.3 Add frontend regressions and run frontend quality gates — 19e740d
 
 #### Manual
 
-- [x] 2.4 Confirm transport failure retains the active session and renders safe feedback
-- [x] 2.5 Confirm empty valid output is distinguishable from unavailable output
+- [x] 2.4 Confirm transport failure retains the active session and renders safe feedback — 19e740d
+- [x] 2.5 Confirm empty valid output is distinguishable from unavailable output — 19e740d
 
 ### Phase 3: Bramka regresji i browser smoke
 
 #### Automated
 
-- [x] 3.1 Run backend unit and PostgreSQL integration gates on isolated local infrastructure
-- [x] 3.2 Run frontend and extension regression gates
+- [x] 3.1 Run backend unit and PostgreSQL integration gates on isolated local infrastructure — 7238e98
+- [x] 3.2 Run frontend and extension regression gates — 7238e98
 
 #### Manual
 
-- [x] 3.3 Smoke the allowed-origin deanonymization flow with synthetic data
-- [x] 3.4 Confirm a disallowed-origin attempt exposes no confidential data
+- [x] 3.3 Smoke the allowed-origin deanonymization flow with synthetic data — 7238e98
+- [x] 3.4 Confirm a disallowed-origin attempt exposes no confidential data — 7238e98
