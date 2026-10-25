@@ -232,10 +232,10 @@ Brak migracji. Historyczne mappingi z pustymi wartościami stają się bezpieczn
 
 #### Automated
 
-- [ ] 3.1 Run backend unit and PostgreSQL integration gates on isolated local infrastructure
-- [ ] 3.2 Run frontend and extension regression gates
+- [x] 3.1 Run backend unit and PostgreSQL integration gates on isolated local infrastructure
+- [x] 3.2 Run frontend and extension regression gates
 
 #### Manual
 
-- [ ] 3.3 Smoke the allowed-origin deanonymization flow with synthetic data
-- [ ] 3.4 Confirm a disallowed-origin attempt exposes no confidential data
+- [x] 3.3 Smoke the allowed-origin deanonymization flow with synthetic data
+- [x] 3.4 Confirm a disallowed-origin attempt exposes no confidential data
