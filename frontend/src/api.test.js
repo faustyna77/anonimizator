@@ -151,47 +151,93 @@ describe('panel access contracts', () => {
     expect(fetchImpl).not.toHaveBeenCalled();
   });
 
-  it('maps deanonymization validation failures to safe text guidance', async () => {
+  it.each([
+    {
+      name: 'a rejected document-list request',
+      request: (api) => api.listDocuments(),
+      fetchImpl: vi.fn().mockRejectedValue(new Error('network details must not reach the UI')),
+      expected: new ApiAccessError('REQUEST_FAILED', 'Nie udało się wykonać żądania. Spróbuj ponownie.'),
+    },
+    {
+      name: 'a rejected deanonymization request',
+      request: (api) => api.deanonymizeResponse('document-id', 'Odpowiedź.'),
+      fetchImpl: vi.fn().mockRejectedValue(new Error('CORS details must not reach the UI')),
+      expected: new ApiAccessError('REQUEST_FAILED', 'Nie udało się wykonać żądania. Spróbuj ponownie.'),
+    },
+    {
+      name: 'a 404 deanonymization response',
+      request: (api) => api.deanonymizeResponse('document-id', 'Odpowiedź.'),
+      fetchImpl: vi.fn().mockResolvedValue({ ok: false, status: 404 }),
+      expected: new ApiAccessError('RESULT_UNAVAILABLE', 'Wynik anonimizacji nie jest dostępny.'),
+    },
+    {
+      name: 'a 422 deanonymization response',
+      request: (api) => api.deanonymizeResponse('document-id', 'Odpowiedź.'),
+      fetchImpl: vi.fn().mockResolvedValue({ ok: false, status: 422 }),
+      expected: new ApiAccessError('RESPONSE_TEXT_INVALID', 'Tekst odpowiedzi jest nieprawidłowy. Spróbuj ponownie.'),
+    },
+    {
+      name: 'a malformed successful deanonymization body',
+      request: (api) => api.deanonymizeResponse('document-id', 'Odpowiedź.'),
+      fetchImpl: vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => { throw new SyntaxError('unexpected response body'); },
+      }),
+      expected: new ApiAccessError('REQUEST_FAILED', 'Nie udało się wykonać żądania. Spróbuj ponownie.'),
+    },
+    {
+      name: 'a successful payload without response_text',
+      request: (api) => api.deanonymizeResponse('document-id', 'Odpowiedź.'),
+      fetchImpl: vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({ server_detail: 'private malformed response' }),
+      }),
+      expected: new ApiAccessError('REQUEST_FAILED', 'Nie udało się wykonać żądania. Spróbuj ponownie.'),
+    },
+    {
+      name: 'a successful payload with null response_text',
+      request: (api) => api.deanonymizeResponse('document-id', 'Odpowiedź.'),
+      fetchImpl: vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({ response_text: null }),
+      }),
+      expected: new ApiAccessError('REQUEST_FAILED', 'Nie udało się wykonać żądania. Spróbuj ponownie.'),
+    },
+    {
+      name: 'a successful payload with an object response_text',
+      request: (api) => api.deanonymizeResponse('document-id', 'Odpowiedź.'),
+      fetchImpl: vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({ response_text: { server_detail: 'private malformed response' } }),
+      }),
+      expected: new ApiAccessError('REQUEST_FAILED', 'Nie udało się wykonać żądania. Spróbuj ponownie.'),
+    },
+  ])('maps $name to a fixed safe error', async ({ request, fetchImpl, expected }) => {
     const api = createProductApi({
       baseUrl: 'https://api.example.test',
       getAccessToken: async () => 'session-token',
-      fetchImpl: vi.fn().mockResolvedValue({ ok: false, status: 422 }),
+      fetchImpl,
     });
 
-    await expect(api.deanonymizeResponse('document-id', 'Odpowiedź.')).rejects.toEqual(
-      new ApiAccessError('RESPONSE_TEXT_INVALID', 'Tekst odpowiedzi jest nieprawidłowy. Spróbuj ponownie.'),
-    );
+    await expect(request(api)).rejects.toEqual(expected);
   });
 
-  it('maps deanonymization unavailable, network, and malformed-response failures to safe errors', async () => {
-    const cases = [
-      {
-        fetchImpl: vi.fn().mockResolvedValue({ ok: false, status: 404 }),
-        expected: new ApiAccessError('RESULT_UNAVAILABLE', 'Wynik anonimizacji nie jest dostępny.'),
-      },
-      {
-        fetchImpl: vi.fn().mockRejectedValue(new Error('network details must not reach the UI')),
-        expected: new ApiAccessError('REQUEST_FAILED', 'Nie udało się wykonać żądania. Spróbuj ponownie.'),
-      },
-      {
-        fetchImpl: vi.fn().mockResolvedValue({
-          ok: true,
-          status: 200,
-          json: async () => { throw new SyntaxError('unexpected response body'); },
-        }),
-        expected: new ApiAccessError('REQUEST_FAILED', 'Nie udało się wykonać żądania. Spróbuj ponownie.'),
-      },
-    ];
+  it('accepts an empty deanonymization response_text as a valid result', async () => {
+    const api = createProductApi({
+      baseUrl: 'https://api.example.test',
+      getAccessToken: async () => 'session-token',
+      fetchImpl: vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({ response_text: '' }),
+      }),
+    });
 
-    for (const { fetchImpl, expected } of cases) {
-      const api = createProductApi({
-        baseUrl: 'https://api.example.test',
-        getAccessToken: async () => 'session-token',
-        fetchImpl,
-      });
-
-      await expect(api.deanonymizeResponse('document-id', 'Odpowiedź.')).rejects.toEqual(expected);
-    }
+    await expect(api.deanonymizeResponse('document-id', 'Odpowiedź.')).resolves.toEqual({ response_text: '' });
   });
 
   it('uses bearer-authenticated CRUD requests for office rules without office_id', async () => {

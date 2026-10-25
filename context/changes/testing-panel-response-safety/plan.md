@@ -207,26 +207,26 @@ Brak migracji. Historyczne mappingi z pustymi wartościami stają się bezpieczn
 
 #### Automated
 
-- [x] 1.1 Enforce isolated known-marker substitution and reject empty mapping values
-- [x] 1.2 Add service regressions for altered, unknown, and unavailable mappings
-- [x] 1.3 Run focused deanonymization service tests
+- [x] 1.1 Enforce isolated known-marker substitution and reject empty mapping values — d9f20dd
+- [x] 1.2 Add service regressions for altered, unknown, and unavailable mappings — d9f20dd
+- [x] 1.3 Run focused deanonymization service tests — d9f20dd
 
 #### Manual
 
-- [x] 1.4 Confirm synthetic fixtures do not derive marker rules from production code
+- [x] 1.4 Confirm synthetic fixtures do not derive marker rules from production code — d9f20dd
 
 ### Phase 2: Kontrakty CORS oraz odpowiedzi klienta
 
 #### Automated
 
-- [ ] 2.1 Add deanonymization POST CORS contract coverage
-- [ ] 2.2 Validate deanonymization success payloads in the frontend client
-- [ ] 2.3 Add frontend regressions and run frontend quality gates
+- [x] 2.1 Add deanonymization POST CORS contract coverage
+- [x] 2.2 Validate deanonymization success payloads in the frontend client
+- [x] 2.3 Add frontend regressions and run frontend quality gates
 
 #### Manual
 
-- [ ] 2.4 Confirm transport failure retains the active session and renders safe feedback
-- [ ] 2.5 Confirm empty valid output is distinguishable from unavailable output
+- [x] 2.4 Confirm transport failure retains the active session and renders safe feedback
+- [x] 2.5 Confirm empty valid output is distinguishable from unavailable output
 
 ### Phase 3: Bramka regresji i browser smoke
 

@@ -340,7 +340,7 @@ def test_update_office_rule_returns_the_updated_rule_from_the_injected_service()
     assert service.calls[0][0:3] == ("update", context, UUID("00000000-0000-0000-0000-000000000006"))
 
 
-def test_delete_office_rule_and_patch_delete_preflight_are_supported():
+def test_delete_office_rule_and_cors_preflight_methods_are_supported():
     service = FakeOfficeRuleService()
     client, app = build_client(document_service=FakeDocumentService(), office_rule_service=service)
     context = _context()
@@ -363,6 +363,36 @@ def test_delete_office_rule_and_patch_delete_preflight_are_supported():
     assert delete_preflight.status_code == status.HTTP_200_OK
     assert "PATCH" in patch_preflight.headers["access-control-allow-methods"]
     assert "DELETE" in delete_preflight.headers["access-control-allow-methods"]
+
+
+def test_deanonymization_post_preflight_allows_configured_origin_and_headers_only():
+    client, _ = build_client(document_service=FakeDocumentService())
+    deanonymization_path = "/documents/00000000-0000-0000-0000-000000000003/deanonymize-response"
+
+    allowed_preflight = client.options(
+        deanonymization_path,
+        headers={
+            "Origin": "http://panel.test",
+            "Access-Control-Request-Method": "POST",
+            "Access-Control-Request-Headers": "Authorization, Content-Type",
+        },
+    )
+    disallowed_preflight = client.options(
+        deanonymization_path,
+        headers={
+            "Origin": "https://untrusted.example.test",
+            "Access-Control-Request-Method": "POST",
+            "Access-Control-Request-Headers": "Authorization, Content-Type",
+        },
+    )
+
+    assert allowed_preflight.status_code == status.HTTP_200_OK
+    assert allowed_preflight.headers["access-control-allow-origin"] == "http://panel.test"
+    assert "POST" in allowed_preflight.headers["access-control-allow-methods"]
+    allowed_headers = allowed_preflight.headers["access-control-allow-headers"].lower()
+    assert "authorization" in allowed_headers
+    assert "content-type" in allowed_headers
+    assert "access-control-allow-origin" not in disallowed_preflight.headers
 
 
 def test_invalid_rule_payload_returns_safe_422_without_echoing_the_pattern_or_validation_context():

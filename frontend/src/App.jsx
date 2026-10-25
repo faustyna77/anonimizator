@@ -46,7 +46,7 @@ function App() {
   const [downloadingDocumentId, setDownloadingDocumentId] = useState(null);
   const [selectedDeanonymizationDocumentId, setSelectedDeanonymizationDocumentId] = useState('');
   const [responseText, setResponseText] = useState('');
-  const [deanonymizedResponse, setDeanonymizedResponse] = useState('');
+  const [deanonymizedResponse, setDeanonymizedResponse] = useState(null);
   const [deanonymizationMessage, setDeanonymizationMessage] = useState(null);
   const [isDeanonymizing, setIsDeanonymizing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -64,7 +64,7 @@ function App() {
   function clearDeanonymizationState() {
     setSelectedDeanonymizationDocumentId('');
     setResponseText('');
-    setDeanonymizedResponse('');
+    setDeanonymizedResponse(null);
     setDeanonymizationMessage(null);
     setIsDeanonymizing(false);
   }
@@ -440,7 +440,7 @@ function App() {
 
   function handleDeanonymizationDocumentChange(event) {
     setSelectedDeanonymizationDocumentId(event.target.value);
-    setDeanonymizedResponse('');
+    setDeanonymizedResponse(null);
     setDeanonymizationMessage(null);
   }
 
@@ -448,7 +448,7 @@ function App() {
     event.preventDefault();
     const generation = requestGenerationRef.current.capture();
     setDeanonymizationMessage(null);
-    setDeanonymizedResponse('');
+    setDeanonymizedResponse(null);
     if (!selectedDeanonymizationDocumentId) {
       setDeanonymizationMessage({ text: 'Wybierz gotowy dokument z historii.', role: 'alert' });
       return;
@@ -707,7 +707,7 @@ function App() {
                 </form>
               )}
               {deanonymizationMessage && <p role={deanonymizationMessage.role}>{deanonymizationMessage.text}</p>}
-              {deanonymizedResponse && (
+              {deanonymizedResponse !== null && (
                 <div className="panel__deanonymization-result">
                   <Field id="deanonymized-response" label="Wynik deanonymizacji">
                     <textarea value={deanonymizedResponse} readOnly rows="8" />

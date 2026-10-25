@@ -130,18 +130,22 @@ export function createProductApi({ baseUrl, getAccessToken, fetchImpl = fetch })
         method: 'GET',
       });
     },
-    deanonymizeResponse(documentId, responseText) {
+    async deanonymizeResponse(documentId, responseText) {
       if (responseText.length > MAX_DEANONYMIZATION_RESPONSE_CHARACTERS) {
-        return Promise.reject(new ApiAccessError(
+        throw new ApiAccessError(
           'RESPONSE_TEXT_TOO_LONG',
           'Tekst odpowiedzi nie może przekraczać 50 000 znaków.',
-        ));
+        );
       }
-      return request(`/documents/${encodeURIComponent(documentId)}/deanonymize-response`, {
+      const result = await request(`/documents/${encodeURIComponent(documentId)}/deanonymize-response`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ response_text: responseText }),
       });
+      if (!result || typeof result.response_text !== 'string') {
+        throw requestFailedError();
+      }
+      return result;
     },
     listOfficeRules() {
       return request('/office-rules', { method: 'GET' });
