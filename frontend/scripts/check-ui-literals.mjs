@@ -6,6 +6,8 @@ const frontendRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 const sourceFiles = [
   join(frontendRoot, 'src/App.jsx'),
   join(frontendRoot, 'src/App.css'),
+  join(frontendRoot, 'src/PrivacyPolicy.jsx'),
+  join(frontendRoot, 'src/PrivacyPolicy.css'),
 ];
 const uiDirectory = join(frontendRoot, 'src/components/ui');
 const sourceExtensions = new Set(['.css', '.cjs', '.js', '.jsx', '.mjs', '.ts', '.tsx']);
@@ -83,7 +85,7 @@ for (const path of files) {
 
 const uiFileCount = files.length - sourceFiles.length;
 console.log(`UI literal guard: ${findings.length} candidate(s) across ${files.length} file(s).`);
-console.log(`Targets: src/App.jsx, src/App.css, src/components/ui/ (${uiFileCount} source file(s)).`);
+console.log(`Targets: src/App.*, src/PrivacyPolicy.*, src/components/ui/ (${uiFileCount} shared source file(s)).`);
 
 for (const finding of findings) {
   console.error(`${finding.path}:${finding.line}:${finding.column} ${finding.name}: ${finding.value}`);

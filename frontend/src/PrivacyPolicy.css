@@ -1,0 +1,56 @@
+.privacy-policy {
+  width: min(900px, 100%);
+  box-sizing: border-box;
+  margin: 0 auto;
+  padding: 48px 32px;
+}
+
+.privacy-policy__header,
+.privacy-policy__content,
+.privacy-policy__footer {
+  display: grid;
+  gap: 20px;
+}
+
+.privacy-policy__header {
+  margin-bottom: 32px;
+}
+
+.privacy-policy__eyebrow {
+  color: var(--action-secondary-text);
+  font-weight: 600;
+}
+
+.privacy-policy__content {
+  gap: 24px;
+}
+
+.privacy-policy__content .ui-card__body {
+  gap: 16px;
+}
+
+.privacy-policy__content ul {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding-left: 24px;
+  color: var(--text-secondary);
+}
+
+.privacy-policy__content li::marker {
+  color: var(--action-primary);
+}
+
+.privacy-policy__content strong {
+  color: var(--text-primary);
+}
+
+.privacy-policy__footer {
+  margin-top: 32px;
+}
+
+@media (max-width: 720px) {
+  .privacy-policy {
+    padding: 28px 20px;
+  }
+}
