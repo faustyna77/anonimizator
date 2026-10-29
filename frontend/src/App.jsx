@@ -17,14 +17,15 @@ import {
   signUpWithPassword,
 } from './auth.js';
 import { Button, Card, Field } from './components/ui/index.js';
+import { resolvePublicConfig } from './public-config.js';
 import './App.css';
 
-const API_BASE = import.meta.env.VITE_API_BASE || 'https://anonimizator.fly.dev';
 const RULE_KINDS = ['phrase', 'regex'];
 
 function App() {
   const [authClient, setAuthClient] = useState(null);
   const [session, setSession] = useState(null);
+  const publicConfigRef = useRef(null);
   const sessionTokenRef = useRef(null);
   const sessionIdentityRef = useRef(null);
   const requestGenerationRef = useRef(createRequestGeneration());
@@ -104,7 +105,9 @@ function App() {
     let subscription;
 
     try {
-      const client = createSupabaseAuthClient();
+      const publicConfig = resolvePublicConfig(import.meta.env);
+      publicConfigRef.current = publicConfig;
+      const client = createSupabaseAuthClient(publicConfig);
       setAuthClient(client);
 
       restoreSession(client)
@@ -183,8 +186,14 @@ function App() {
   }
 
   function productApi() {
+    const publicConfig = publicConfigRef.current;
+
+    if (!publicConfig) {
+      throw new Error('Konfiguracja panelu jest nieprawidłowa.');
+    }
+
     return createProductApi({
-      baseUrl: API_BASE,
+      baseUrl: publicConfig.apiBase,
       getAccessToken: async () => session?.access_token ?? null,
     });
   }

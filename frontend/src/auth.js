@@ -1,19 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 
-function getPublicAuthConfig(environment) {
-  const url = environment.VITE_SUPABASE_URL;
-  const anonKey = environment.VITE_SUPABASE_ANON_KEY;
-
-  if (!url || !anonKey) {
-    throw new Error('Brakuje publicznej konfiguracji Supabase panelu.');
-  }
-
-  return { anonKey, url };
-}
-
-export function createSupabaseAuthClient(environment = import.meta.env) {
-  const { anonKey, url } = getPublicAuthConfig(environment);
-  return createClient(url, anonKey);
+export function createSupabaseAuthClient({ supabaseUrl, supabaseAnonKey }) {
+  return createClient(supabaseUrl, supabaseAnonKey);
 }
 
 export async function restoreSession(authClient) {
