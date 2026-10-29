@@ -8,6 +8,7 @@
     "build": "vite build",
     "lint": "oxlint && npm run lint:ui-literals",
     "lint:ui-literals": "node scripts/check-ui-literals.mjs",
+    "validate:public-config": "node scripts/validate-public-config.mjs",
     "preview": "vite preview",
     "test": "vitest run"
   },

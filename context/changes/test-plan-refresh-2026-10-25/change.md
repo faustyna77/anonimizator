@@ -3,7 +3,7 @@ change_id: test-plan-refresh-2026-10-25
 title: Odświeżenie mapy ryzyk i kolejnego etapu testów
 status: implementing
 created: 2026-10-25
-updated: 2026-10-25
+updated: 2026-10-29
 archived_at: null
 ---
 

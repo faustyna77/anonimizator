@@ -80,6 +80,10 @@ The frontend build receives only these public variables:
 - `VITE_SUPABASE_ANON_KEY`
 - `VITE_API_BASE`
 
+All three values are required. Remote endpoints must use HTTPS. HTTP is allowed only for local development on `localhost`, `127.0.0.1`, or `[::1]`.
+
+Before a Fly deployment, GitHub Actions runs `npm run validate:public-config` in `frontend/`. The command reads the three existing public variables from its environment, checks their presence and URL policy, and stops the workflow before `flyctl deploy` if the configuration is invalid. It never prints the configured values.
+
 The Fly GitHub workflow supplies them as build arguments. Keep server credentials, `DATABASE_URL`, S3 credentials, and `DOCUMENT_MAPPING_ENCRYPTION_KEY` out of `frontend/`, `VITE_*`, Docker build arguments, and GitHub workflow build environments.
 
 ## S-01 and later-slice boundary
@@ -87,3 +91,9 @@ The Fly GitHub workflow supplies them as build arguments. Keep server credential
 S-01 document storage and S-03 office rules consume the backend's `get_current_access_context` dependency as the sole source of trusted user and office IDs. They must not accept client-selected office IDs or introduce a second authentication mechanism.
 
 S-01 includes single PDF/DOCX upload, anonymization, storage, history, and owned-result download. It excludes OCR and scanned PDFs without a usable text layer, batch upload, files above 10 MB, direct original or mapping access, and browser-to-S3 access. S-02 owns Chrome-extension authentication and document transfer. S-03 owns office rules and manual marker correction. S-04 owns reversing markers from the encrypted mapping; S-01 never exposes that mapping to a client.
+
+## S-02 Chrome extension through Chrome Web Store
+
+The Chrome Web Store package contains the extension runtime, required icons, and a publisher-prepared public client `config.js` with only `backendUrl`, `supabaseUrl`, and `supabaseAnonKey`. Before running `npm run package:store` in `chrome-extension/`, the publisher creates that ignored local file from `config.example.js` and sets the production public values. A user installing through **Add to Chrome** never creates `config.js`, downloads a ZIP, or enables developer mode.
+
+Do not add an AWS credential, `DOCUMENT_MAPPING_ENCRYPTION_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, a password, or a session token to the package; server-side secrets stay in local backend configuration or the Fly secret store. The extension is intentionally restricted to an active local AI page at `http://127.0.0.1:5173/`. It accepts one PDF or DOCX up to 10 MiB, passes its bearer token only to the protected backend endpoints, and downloads the owned anonymized result for manual attachment. It does not support other websites, automatic attachment, direct S3 access, original download, or marker-map access. See [chrome-extension/STORE_SUBMISSION.md](../chrome-extension/STORE_SUBMISSION.md) for the publisher checklist and [the deployed privacy policy](https://anonimizator-panel.fly.dev/privacy-policy) for user-facing data handling.

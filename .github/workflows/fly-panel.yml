@@ -9,6 +9,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+        working-directory: frontend
+      - run: npm run validate:public-config
+        working-directory: frontend
+        env:
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
+          VITE_API_BASE: ${{ vars.VITE_API_BASE }}
       - uses: superfly/flyctl-actions/setup-flyctl@master
       - run: >-
           flyctl deploy --app anonimizator-panel --config fly.toml --remote-only

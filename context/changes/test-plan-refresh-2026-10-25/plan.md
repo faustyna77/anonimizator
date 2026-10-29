@@ -171,21 +171,21 @@ Brak migracji danych. Aktualne GitHub Variables zachowują swoje nazwy; tylko ic
 
 #### Automated
 
-- [x] 1.1 Testy kontraktu publicznej konfiguracji
-- [x] 1.2 Wspólny resolver używany przez auth i API
-- [x] 1.3 Pełna bramka lint/build frontendu
+- [x] 1.1 Testy kontraktu publicznej konfiguracji — 7a9b258
+- [x] 1.2 Wspólny resolver używany przez auth i API — 7a9b258
+- [x] 1.3 Pełna bramka lint/build frontendu — 7a9b258
 
 #### Manual
 
-- [x] 1.4 Ręczna weryfikacja konfiguracji local dev i błędu fail-fast
+- [x] 1.4 Ręczna weryfikacja konfiguracji local dev i błędu fail-fast — 7a9b258
 
 ### Phase 2: Bramka release’u konfiguracji
 
 #### Automated
 
-- [ ] 2.1 Skrypt preflightu publicznej konfiguracji
-- [ ] 2.2 Workflow zatrzymuje deploy przed Fly
-- [ ] 2.3 Pełna bramka frontendu po wiringu release’u
+- [x] 2.1 Skrypt preflightu publicznej konfiguracji
+- [x] 2.2 Workflow zatrzymuje deploy przed Fly
+- [x] 2.3 Pełna bramka frontendu po wiringu release’u
 
 #### Manual
 
