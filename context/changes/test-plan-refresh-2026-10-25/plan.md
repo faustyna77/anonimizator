@@ -183,11 +183,11 @@ Brak migracji danych. Aktualne GitHub Variables zachowują swoje nazwy; tylko ic
 
 #### Automated
 
-- [x] 2.1 Skrypt preflightu publicznej konfiguracji
-- [x] 2.2 Workflow zatrzymuje deploy przed Fly
-- [x] 2.3 Pełna bramka frontendu po wiringu release’u
+- [x] 2.1 Skrypt preflightu publicznej konfiguracji — 1b66830
+- [x] 2.2 Workflow zatrzymuje deploy przed Fly — 1b66830
+- [x] 2.3 Pełna bramka frontendu po wiringu release’u — 1b66830
 
 #### Manual
 
-- [ ] 2.4 Ręczna weryfikacja kolejnego release’u i dokumentacji
-- [ ] 2.5 Ręczne odtworzenie lokalnego preflightu na syntetycznych wartościach
+- [x] 2.4 Ręczna weryfikacja kolejnego release’u i dokumentacji — 1b66830
+- [x] 2.5 Ręczne odtworzenie lokalnego preflightu na syntetycznych wartościach — 1b66830
