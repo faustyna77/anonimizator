@@ -22,7 +22,7 @@ class RuleValidationError(ValueError):
 
 
 _MARKER_LABEL = re.compile(r"^[A-Z][A-Z0-9_]{0,31}$")
-_RESERVED_MARKER_LABELS = frozenset({"PESEL", "NIP", "EMAIL", "TELEFON", "IBAN"})
+_RESERVED_MARKER_LABELS = frozenset({"PESEL", "NIP", "EMAIL", "TELEFON", "IBAN", "NRB", "REGON"})
 _CONTEXTUAL_REGEX_TOKENS = ("^", "$", r"\b", r"\B")
 _MAX_PHRASE_LENGTH = 255
 _MAX_REGEX_LENGTH = 512
@@ -119,6 +119,16 @@ def _nip_is_valid(value: str) -> bool:
     return checksum != 10 and checksum == int(digits[9])
 
 
+def _regon_is_valid(value: str) -> bool:
+    digits = _digits(value)
+    if len(digits) != 9:
+        return False
+    checksum = sum(
+        digit * weight for digit, weight in zip(map(int, digits[:8]), (8, 9, 2, 3, 4, 5, 6, 7))
+    ) % 11
+    return (0 if checksum == 10 else checksum) == int(digits[8])
+
+
 def _iban_is_valid(value: str) -> bool:
     compact = re.sub(r"[ -]", "", value).upper()
     if not re.fullmatch(r"PL\d{26}", compact):
@@ -129,6 +139,11 @@ def _iban_is_valid(value: str) -> bool:
     for character in numeric:
         remainder = (remainder * 10 + int(character)) % 97
     return remainder == 1
+
+
+def _nrb_is_valid(value: str) -> bool:
+    digits = _digits(value)
+    return len(digits) == 26 and _iban_is_valid(f"PL{digits}")
 
 
 def _email_is_valid(value: str) -> bool:
@@ -149,6 +164,12 @@ _RULES = (
         lambda value: re.sub(r"[ -]", "", value).upper(),
     ),
     _IdentifierRule(
+        "NRB",
+        re.compile(r"(?<!\d)\d{2}(?:[ -]?\d{4}){6}(?!\d)"),
+        _nrb_is_valid,
+        _digits,
+    ),
+    _IdentifierRule(
         "EMAIL",
         re.compile(r"(?<![\w.+-])[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}(?![\w.-])", re.IGNORECASE),
         _email_is_valid,
@@ -165,6 +186,13 @@ _RULES = (
         re.compile(r"(?<!\d)\d{3}-?\d{2}-?\d{2}-?\d{3}(?!\d)"),
         _nip_is_valid,
         _digits,
+    ),
+    _IdentifierRule(
+        "REGON",
+        re.compile(r"(?<!\d)\d{9}(?!\d)"),
+        _regon_is_valid,
+        _digits,
+        priority=-1,
     ),
     _IdentifierRule(
         "TELEFON",

@@ -19,14 +19,16 @@ from backend.tests.pii_manifest import (
 
 
 SYNTHETIC_IDENTIFIERS = (
-    "44051401458 8567346215 synthetic.person@example.test +48 123 456 789 "
-    "PL61 1090 1014 0000 0712 1981 2874"
+    "44051401458 8567346215 synthetic.person@example.test 192598474 +48 123 456 789 "
+    "11 1140 2004 0000 3002 1800 0002 PL61 1090 1014 0000 0712 1981 2874"
 )
 SOURCE_IDENTIFIERS = (
     "44051401458",
     "8567346215",
     "synthetic.person@example.test",
+    "192598474",
     "+48 123 456 789",
+    "11 1140 2004 0000 3002 1800 0002",
     "PL61 1090 1014 0000 0712 1981 2874",
 )
 
@@ -107,10 +109,12 @@ def test_docx_anonymization_preserves_runs_and_handles_body_table_header_and_foo
     assert "[PESEL_1]" in text
     assert "[NIP_1]" in text
     assert "[EMAIL_1]" in text
+    assert "[REGON_1]" in text
     assert "[TELEFON_1]" in text
+    assert "[NRB_1]" in text
     assert "[IBAN_1]" in text
     assert not any(identifier in text for identifier in SOURCE_IDENTIFIERS)
-    assert set(mapping) == {"[PESEL_1]", "[NIP_1]", "[EMAIL_1]", "[TELEFON_1]", "[IBAN_1]"}
+    assert set(mapping) == {"[PESEL_1]", "[NIP_1]", "[EMAIL_1]", "[REGON_1]", "[TELEFON_1]", "[NRB_1]", "[IBAN_1]"}
 
 
 def test_pdf_anonymization_uses_value_only_regex_for_repeated_text():
@@ -152,13 +156,15 @@ def test_pdf_anonymization_redacts_in_place_and_preserves_pages_layout_and_stati
     assert "[PESEL_1]" in text
     assert "[NIP_1]" in text
     assert "[EMAIL_1]" in text
+    assert "[REGON_1]" in text
     assert "[TELEFON_1]" in text
+    assert "[NRB_1]" in text
     assert "[IBAN_1]" in text
     assert "synthetic layout text remains" in text
     assert "second page survives unchanged" in text
     assert not any(identifier in text for identifier in SOURCE_IDENTIFIERS)
     assert not any(identifier.encode("utf-8") in output for identifier in SOURCE_IDENTIFIERS)
-    assert set(mapping) == {"[PESEL_1]", "[NIP_1]", "[EMAIL_1]", "[TELEFON_1]", "[IBAN_1]"}
+    assert set(mapping) == {"[PESEL_1]", "[NIP_1]", "[EMAIL_1]", "[REGON_1]", "[TELEFON_1]", "[NRB_1]", "[IBAN_1]"}
 
 
 @pytest.mark.parametrize(

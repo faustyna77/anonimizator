@@ -46,6 +46,12 @@ npm run build
 
 ## S-01 scope boundary
 
-S-01 supports text-layer PDF and DOCX anonymization for PESEL, NIP, e-mail, telephone, and IBAN values. OCR and scanned PDFs without a usable text layer, batch upload, and files larger than 10 MB are outside this slice.
+S-01 supports text-layer PDF and DOCX anonymization for PESEL, NIP, e-mail, REGON, telephone, Polish NRB account numbers, and IBAN values. OCR and scanned PDFs without a usable text layer, batch upload, external registry checks, and files larger than 10 MB are outside this slice.
 
-The Chrome extension's authentication and document transfer belong to S-02. Office rules and manual marker correction belong to S-03. Reversing markers from the encrypted mapping belongs to S-04. None of those capabilities is implemented by S-01.
+## S-02 Chrome extension through Chrome Web Store
+
+S-02 is a Chrome Manifest V3 extension distributed through Chrome Web Store after Google approval. A signed-in user can select one PDF or DOCX up to 10 MiB, send it to the existing protected anonymization API, and download only the anonymized result for manual attachment in the local AI application at `http://127.0.0.1:5173/`.
+
+The user installs with **Add to Chrome** and never creates `config.js`, downloads a ZIP, or enables developer mode. The publisher bundles only public Fly/Supabase client configuration into the reviewed Store package; it must never include AWS credentials, a Fernet key, a Supabase service-role key, a user password, a session token, or a client-selected office identifier. User installation and scope limits are documented in [chrome-extension/README.md](chrome-extension/README.md); publisher submission materials are in [chrome-extension/STORE_SUBMISSION.md](chrome-extension/STORE_SUBMISSION.md). The public [privacy policy](https://anonimizator-panel.fly.dev/privacy-policy) describes the data flow and current retention boundary.
+
+Office rules and manual marker correction belong to S-03. Reversing markers from the encrypted mapping belongs to S-04.
