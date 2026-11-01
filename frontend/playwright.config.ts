@@ -23,8 +23,8 @@ export default defineConfig({
     },
   ],
   webServer: {
-    // Force an invalid API base to exercise the visible configuration-error boundary.
-    command: `VITE_API_BASE='' npm run build && npm run preview -- --host 127.0.0.1 --port ${PORT}`,
+    // Use a deterministic local public configuration; each browser smoke intercepts only the requests it needs.
+    command: `VITE_SUPABASE_URL='http://127.0.0.1:54321' VITE_SUPABASE_ANON_KEY='e2e-public-key' VITE_API_BASE='http://127.0.0.1:8000' npm run build && npm run preview -- --host 127.0.0.1 --port ${PORT}`,
     url: baseURL,
     reuseExistingServer: !process.env.CI,
     timeout: 180_000,
