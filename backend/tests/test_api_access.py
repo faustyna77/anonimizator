@@ -44,6 +44,11 @@ class FailingDocumentService:
         raise DocumentProcessingError("PDF text layer is unavailable; OCR is not supported in this MVP.")
 
 
+class UnexpectedDocumentService:
+    def process_upload(self, *_args, **_kwargs):
+        raise RuntimeError("controlled storage outage")
+
+
 class FakeOfficeRuleService:
     def __init__(self):
         self.calls = []
@@ -635,6 +640,23 @@ def test_anonymize_returns_a_controlled_processing_error():
     assert response.json() == {
         "detail": "PDF text layer is unavailable; OCR is not supported in this MVP."
     }
+
+
+def test_anonymize_reports_an_unexpected_processing_failure_without_document_content(caplog):
+    client, app = build_client(document_service=UnexpectedDocumentService())
+    app.dependency_overrides[get_current_access_context] = _context
+
+    with caplog.at_level("ERROR", logger="backend.app.main"):
+        response = client.post(
+            "/anonymize",
+            headers={"Authorization": "Bearer controlled-token"},
+            files=_controlled_file(filename="client-private-filename.pdf"),
+        )
+
+    assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+    assert response.json() == {"detail": "The document could not be processed."}
+    assert "client-private-filename.pdf" not in caplog.text
+    assert any(record.message == "document_processing_failed" and record.exc_info for record in caplog.records)
 
 
 def test_production_disables_docs_and_uses_explicit_cors_origins():

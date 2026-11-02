@@ -41,6 +41,11 @@ class FakeS3Client:
         self.objects[kwargs["Key"]] = kwargs["Body"]
 
 
+class FailingS3Client:
+    def put_object(self, **_kwargs):
+        raise RuntimeError("controlled storage outage")
+
+
 class FakeRuleSnapshotService:
     def __init__(self, anonymizer):
         self.anonymizer = anonymizer
@@ -398,3 +403,37 @@ def test_service_marks_document_failed_after_a_controlled_format_error(monkeypat
 
     assert created[0].status == "failed"
     assert len(fake_s3.objects) == 1
+
+
+def test_service_preserves_an_operational_storage_failure_for_the_api_boundary(monkeypatch):
+    settings = _settings()
+    created = []
+
+    def create_processing(session, context, **kwargs):
+        document = SimpleNamespace(id=kwargs["document_id"], status="processing", **kwargs)
+        created.append(document)
+        return document
+
+    def mark_failed(session, context, document_id):
+        created[0].status = "failed"
+        return created[0]
+
+    monkeypatch.setattr(document_service.document_repository, "create_processing_document", create_processing)
+    monkeypatch.setattr(document_service.document_repository, "mark_document_failed", mark_failed)
+    service = DocumentProcessingService(
+        session_factory=FakeSession,
+        storage=DocumentStorage(settings, client=FailingS3Client()),
+        mapping_cipher=DocumentMappingCipher.from_settings(settings),
+        office_rule_service=FakeRuleSnapshotService(DocumentAnonymizer()),
+    )
+
+    with pytest.raises(RuntimeError, match="controlled storage outage"):
+        service.process_upload(
+            _context(),
+            content=_docx_bytes("synthetic content"),
+            original_filename="synthetic.docx",
+            document_format="docx",
+            content_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        )
+
+    assert created[0].status == "failed"

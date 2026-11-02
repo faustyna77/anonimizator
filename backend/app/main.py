@@ -1,4 +1,5 @@
 from datetime import datetime
+import logging
 from typing import Optional, Protocol
 from uuid import UUID
 
@@ -27,6 +28,7 @@ from backend.app.office_rule_service import (
 )
 
 _MAX_DEANONYMIZATION_RESPONSE_LENGTH = 50_000
+logger = logging.getLogger(__name__)
 
 
 class DocumentProcessor(Protocol):
@@ -195,6 +197,14 @@ def create_app(
         except DocumentProcessingError as error:
             raise HTTPException(status_code=422, detail=str(error)) from error
         except Exception as error:
+            logger.exception(
+                "document_processing_failed",
+                extra={
+                    "operation": "document_anonymization",
+                    "document_format": uploaded_document.document_format,
+                    "office_id": str(access_context.office_id),
+                },
+            )
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="The document could not be processed.",

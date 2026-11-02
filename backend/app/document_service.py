@@ -111,9 +111,9 @@ class DocumentProcessingService:
         except DocumentProcessingError:
             self._mark_failed(session, access_context, document_id, document)
             raise
-        except Exception as error:
+        except Exception:
             self._mark_failed(session, access_context, document_id, document)
-            raise DocumentProcessingError("The document could not be processed.") from error
+            raise
         finally:
             session.close()
 
