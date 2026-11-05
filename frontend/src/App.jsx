@@ -22,10 +22,10 @@ import './App.css';
 
 const RULE_KINDS = ['phrase', 'regex'];
 const PANEL_SECTIONS = [
+  { id: 'rules', label: 'Reguły kancelarii' },
   { id: 'anonymization', label: 'Anonimizacja' },
   { id: 'history', label: 'Historia dokumentów' },
   { id: 'deanonymization', label: 'Deanonimizacja' },
-  { id: 'rules', label: 'Reguły kancelarii' },
 ];
 
 function App() {
