@@ -23,6 +23,49 @@
   gap: 24px;
 }
 
+.panel__header--workspace {
+  padding-bottom: var(--space-xl);
+  border-bottom: var(--border-width) solid var(--border-subtle);
+}
+
+.panel__header--workspace h1 {
+  margin: var(--space-sm) 0;
+  font-size: var(--font-size-panel-title);
+  line-height: var(--line-height-heading);
+  letter-spacing: normal;
+  font-weight: var(--font-weight-emphasis);
+}
+
+.panel__eyebrow {
+  color: var(--action-secondary-text);
+  font-size: var(--font-size-label);
+  font-weight: var(--font-weight-emphasis);
+}
+
+.panel__account {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: var(--space-md);
+  min-width: 0;
+}
+
+.panel__account-email {
+  color: var(--text-secondary);
+  font-size: var(--font-size-label);
+  overflow-wrap: anywhere;
+}
+
+.panel__section-footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-lg);
+  margin-top: var(--space-xl);
+}
+
 .panel__upload-card {
   padding: 32px;
 }
@@ -118,6 +161,10 @@
 
   .panel__support-grid {
     grid-template-columns: 1fr;
+  }
+
+  .panel__account {
+    justify-content: flex-start;
   }
 
   .panel__upload-card {

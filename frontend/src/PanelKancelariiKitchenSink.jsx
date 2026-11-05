@@ -1,7 +1,9 @@
-import { Button, Card, Field } from './components/ui/index.js';
+import { useState } from 'react';
+import { Button, Card, Field, Tabs, TabPanel } from './components/ui/index.js';
 import './PanelKancelariiKitchenSink.css';
 
 function PanelKancelariiKitchenSink() {
+  const [activeTab, setActiveTab] = useState('documents');
   return (
     <main className="panel kitchen-sink">
       <header className="panel__header">
@@ -12,6 +14,24 @@ function PanelKancelariiKitchenSink() {
       </header>
 
       <div className="panel__workspace">
+        <Tabs
+          id="kitchen-sink-navigation"
+          label="Przykładowe sekcje panelu"
+          items={[
+            { id: 'documents', label: 'Dokumenty' },
+            { id: 'rules', label: 'Reguły kancelarii' },
+          ]}
+          value={activeTab}
+          onChange={setActiveTab}
+        />
+        <TabPanel id="kitchen-sink-navigation" value="documents" activeValue={activeTab}>
+          <p>Aktywna sekcja dokumentów. Zakładki obsługują strzałki oraz klawisze Home i End.</p>
+        </TabPanel>
+        <TabPanel id="kitchen-sink-navigation" value="rules" activeValue={activeTab}>
+          <Field id="kitchen-sink-rule-draft" label="Szkic reguły zachowany po zmianie zakładki">
+            <input type="text" />
+          </Field>
+        </TabPanel>
         <Card
           className="panel__upload-card"
           description="Stan domyślny głównej akcji anonimizacji."

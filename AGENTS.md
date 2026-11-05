@@ -31,5 +31,6 @@ FastAPI backend (`backend/app/main.py`) + Chrome extension (`chrome-extension/`)
 ## Frontend UI contract
 - Source semantic UI tokens only from `frontend/src/index.css`.
 - Before adding a new primitive, inspect and reuse `frontend/src/components/ui/` (`Button`, `Card`, `Field`).
+- Use the shared `Tabs` / `TabPanel` for panel sections; keep inactive panels mounted to preserve file selections and form drafts, and reset the active section when the account changes.
 - Do not place literal colors or arbitrary UI values in cleaned views; use the token and primitive contracts instead.
 - The dev-only state reference is `http://127.0.0.1:5173/?view=kitchen-sink`; it must stay gated by `import.meta.env.DEV`.

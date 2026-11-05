@@ -49,6 +49,7 @@ test('risk #5: an authenticated document-history failure is visible and retry re
   await page.getByLabel('E-mail').fill(session.user.email);
   await page.getByLabel('Hasło', { exact: true }).fill('browser-smoke-password');
   await page.getByRole('button', { name: 'Zaloguj się' }).click();
+  await page.getByRole('tab', { name: 'Historia dokumentów' }).click();
 
   await expect(page.getByText('Nie udało się wykonać żądania. Spróbuj ponownie.', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Spróbuj ponownie' }).click();

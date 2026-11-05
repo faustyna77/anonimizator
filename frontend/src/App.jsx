@@ -16,15 +16,22 @@ import {
   signOut,
   signUpWithPassword,
 } from './auth.js';
-import { Button, Card, Field } from './components/ui/index.js';
+import { Button, Card, Field, Tabs, TabPanel } from './components/ui/index.js';
 import { resolvePublicConfig } from './public-config.js';
 import './App.css';
 
 const RULE_KINDS = ['phrase', 'regex'];
+const PANEL_SECTIONS = [
+  { id: 'anonymization', label: 'Anonimizacja' },
+  { id: 'history', label: 'Historia dokumentów' },
+  { id: 'deanonymization', label: 'Deanonimizacja' },
+  { id: 'rules', label: 'Reguły kancelarii' },
+];
 
 function App() {
   const [authClient, setAuthClient] = useState(null);
   const [session, setSession] = useState(null);
+  const [activeSection, setActiveSection] = useState('anonymization');
   const publicConfigRef = useRef(null);
   const sessionTokenRef = useRef(null);
   const sessionIdentityRef = useRef(null);
@@ -71,6 +78,7 @@ function App() {
   }
 
   function clearOfficeScopedUiState() {
+    setActiveSection('anonymization');
     setDocumentsResource(createLoadingResource());
     setOfficeRulesResource(createLoadingResource());
     setRuleDrafts(resetRuleDrafts());
@@ -500,15 +508,27 @@ function App() {
   if (session) {
     return (
       <main className="panel">
-        <header className="panel__header">
+        <header className="panel__header panel__header--workspace">
           <div>
+            <p className="panel__eyebrow">Anonimizator prawniczy</p>
             <h1>Panel Kancelarii</h1>
-            <p>Zalogowano jako {session.user?.email || 'użytkownik kancelarii'}.</p>
+            <p>Twoja przestrzeń pracy z dokumentami.</p>
           </div>
-          <Button variant="secondary" onClick={handleSignOut}>Wyloguj</Button>
+          <div className="panel__account">
+            <span className="panel__account-email">{session.user?.email || 'Użytkownik kancelarii'}</span>
+            <Button variant="secondary" onClick={handleSignOut}>Wyloguj</Button>
+          </div>
         </header>
 
         <div className="panel__workspace">
+          <Tabs
+            id="workspace"
+            label="Sekcje panelu kancelarii"
+            items={PANEL_SECTIONS}
+            value={activeSection}
+            onChange={setActiveSection}
+          />
+          <TabPanel id="workspace" value="anonymization" activeValue={activeSection}>
           <Card
             className="panel__upload-card"
             description="Prześlij jeden plik PDF lub DOCX o rozmiarze do 10 MB."
@@ -531,7 +551,15 @@ function App() {
             </form>
             {documentMessage && <p role={documentMessage.role}>{documentMessage.text}</p>}
           </Card>
+          {documentsResource.status === 'ready' && documents.length > 0 && (
+            <div className="panel__section-footer">
+              <p>Przesłane dokumenty i wyniki znajdziesz w historii.</p>
+              <Button variant="secondary" onClick={() => setActiveSection('history')}>Przejdź do historii</Button>
+            </div>
+          )}
+          </TabPanel>
 
+          <TabPanel id="workspace" value="rules" activeValue={activeSection}>
           <Card
             description="Dodawaj osobno dosłowne frazy i wyrażenia regularne dla kolejnych dokumentów."
             title="Reguły anonimizacji"
@@ -639,9 +667,11 @@ function App() {
             })}
           </div>
           </Card>
+          </TabPanel>
 
-          <div className="panel__support-grid">
-            <Card title="Historia dokumentów" titleId="document-history-title">
+          <TabPanel id="workspace" value="history" activeValue={activeSection}>
+            <Card title="Historia dokumentów" titleId="document-history-title" description="Sprawdzaj status przesłanych dokumentów i pobieraj wyniki anonimizacji.">
+              {documentMessage && <p role={documentMessage.role}>{documentMessage.text}</p>}
               {documentsResource.status === 'loading' && <p role="status">Ładowanie historii dokumentów…</p>}
               {documentsResource.status === 'error' && (
                 <>
@@ -651,7 +681,12 @@ function App() {
                   </Button>
                 </>
               )}
-              {isEmptyResource(documentsResource) && <p>Nie przesłano jeszcze dokumentów.</p>}
+              {isEmptyResource(documentsResource) && (
+                <>
+                  <p>Nie przesłano jeszcze dokumentów.</p>
+                  <Button variant="secondary" onClick={() => setActiveSection('anonymization')}>Anonimizuj pierwszy dokument</Button>
+                </>
+              )}
               {documentsResource.status === 'ready' && !isEmptyResource(documentsResource) && (
                 <ul className="panel__document-list">
                   {documents.map((document) => (
@@ -672,16 +707,26 @@ function App() {
                 </ul>
               )}
             </Card>
+          </TabPanel>
 
+          <TabPanel id="workspace" value="deanonymization" activeValue={activeSection}>
             <Card
               description="Wybierz zanonimizowany dokument z historii i wklej odpowiedź AI. Tekst nie zostanie zapisany."
               title="Przywróć dane w odpowiedzi AI"
               titleId="response-deanonymization-title"
             >
               {documentsResource.status === 'loading' && <p role="status">Ładowanie dokumentów do wyboru…</p>}
-              {documentsResource.status === 'error' && <p role="alert">Nie można wybrać dokumentu, dopóki historia nie zostanie pobrana.</p>}
+              {documentsResource.status === 'error' && (
+                <>
+                  <p role="alert">Nie można wybrać dokumentu, dopóki historia nie zostanie pobrana.</p>
+                  <Button variant="secondary" onClick={() => { void loadDocuments(); }}>Spróbuj ponownie</Button>
+                </>
+              )}
               {documentsResource.status === 'ready' && readyDocuments.length === 0 && (
-                <p>Nie masz jeszcze gotowego dokumentu do wyboru.</p>
+                <>
+                  <p>Nie masz jeszcze gotowego dokumentu do wyboru.</p>
+                  <Button variant="secondary" onClick={() => setActiveSection('anonymization')}>Przejdź do anonimizacji</Button>
+                </>
               )}
               {documentsResource.status === 'ready' && readyDocuments.length > 0 && (
                 <form className="panel__deanonymization-form" onSubmit={handleDeanonymization}>
@@ -724,7 +769,7 @@ function App() {
                 </div>
               )}
             </Card>
-          </div>
+          </TabPanel>
         </div>
       </main>
     );

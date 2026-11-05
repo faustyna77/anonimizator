@@ -27,6 +27,28 @@
   --font-heading: system-ui, 'Segoe UI', Roboto, sans-serif;
   --font-mono: ui-monospace, Consolas, monospace;
 
+  /* Panel navigation: shared spacing, sizing and interaction tokens. */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 16px;
+  --space-xl: 24px;
+  --space-2xl: 32px;
+  --radius-control: 6px;
+  --radius-panel: 8px;
+  --border-width: 1px;
+  --tab-indicator-width: 3px;
+  --focus-width: 3px;
+  --focus-offset: 2px;
+  --font-size-label: 0.875rem;
+  --font-size-panel-title: 1.75rem;
+  --font-weight-emphasis: 600;
+  --line-height-heading: 1.25;
+  --surface-transparent: transparent;
+  --tabs-active-surface: var(--action-secondary);
+  --tabs-active-text: var(--action-secondary-text);
+  --tabs-active-indicator: var(--action-primary);
+
   color-scheme: light dark;
   font: 18px/145% var(--font-sans);
   letter-spacing: 0.18px;
