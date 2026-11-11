@@ -1,5 +1,5 @@
 # Anonimizator Prawniczy
-
+LINK DO FILMU: https://youtu.be/nAcnHLg8Y9o
 Narzędzie dla kancelarii prawnych, które zastępuje rozpoznane dane w dokumentach PDF i DOCX markerami, np. `[PESEL_1]` lub `[EMAIL_1]`. Pozwala pobrać wynik, wykorzystać go w aplikacji AI, a następnie przywrócić dane w wklejonej odpowiedzi na podstawie mapowania wybranego dokumentu.
 
 Projekt obejmuje panel WWW (React), API (FastAPI) i rozszerzenie Chrome Manifest V3. Uwierzytelnianie obsługuje Supabase Auth, metadane i zaszyfrowane mapowania są przechowywane w PostgreSQL, a pliki w prywatnym AWS S3.
